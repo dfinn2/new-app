@@ -55,7 +55,7 @@ export const PRODUCT_QUERY =
   _id,
   name,
   description,
-  price,
+  basePrice,
   "slug": slug.current,
   "image": mainImage.asset->url
    }`);

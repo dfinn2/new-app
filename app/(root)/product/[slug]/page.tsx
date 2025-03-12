@@ -4,8 +4,6 @@ import { PRODUCT_PAGE_QUERY } from '@/sanity/lib/queries';
 import { client } from '@/sanity/lib/client';
 import React, { useState, use } from 'react'
 import { notFound } from "next/navigation"
-import { formatDate } from '@/lib/utils';
-import Link from 'next/link';
 import markdownit from 'markdown-it';
 
 const md = markdownit()
@@ -16,12 +14,21 @@ async function getProductData(slug: string) {
 }
 
 
+interface Product {
+  title: string;
+  description: string;
+  name: string;
+  category: string;
+  basePrice?: number;
+  content?: string;
+}
+
 const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
   const unwrappedParams = use(params);
   const slug = unwrappedParams.slug;
   
   const [showForm, setShowForm] = useState(false);
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [parsedContent, setParsedContent] = useState('');
 
@@ -70,12 +77,11 @@ const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
             >
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <p className="tag">{formatDate(post?._createdAt)}</p>
+                  <h2 className="text-2xl font-bold">{post.name}</h2>
                   <p className="category-tag">{post.category}</p>
                 </div>
-                
-                <h2 className="text-2xl font-bold">{post.title}</h2>
-                <p className="text-gray-600">{post.description}</p>
+                                
+                <p className="text-gray-600">YYY {post.description}</p>
                 
                 {post.basePrice && (
                   <div className="mt-4">
@@ -84,16 +90,7 @@ const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
                   </div>
                 )}
                 
-                <div className="pt-4 border-t mt-4">
-                  <Link 
-                    href={`/user/${post.author?._id}`}
-                    className="flex items-center gap-2"    
-                  >
-                    <div>
-                      <p className="text-16-medium">{post.name}</p>
-                    </div> 
-                  </Link>
-                </div>
+                
                 
                 <button 
                   onClick={() => setShowForm(true)}
