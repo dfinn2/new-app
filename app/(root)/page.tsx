@@ -3,6 +3,7 @@ import ProductCard from "@/components/ProductCard";
 import { client } from "@/sanity/lib/client";
 import FeatureCard from "@/components/FeatureCard";
 import { ProductTypeCard } from "@/components/ProductCard";
+import SimpleStripeButton from "@/components/SimpleStripeButton";
 
 import { PRODUCT_QUERY } from "@/sanity/lib/queries";
 
@@ -83,6 +84,12 @@ export default async function Home({ searchParams }: { searchParams: { query?: s
               </p>
             </div>
           )}
+        </div>
+        <div>
+          <SimpleStripeButton 
+            productName="Standard Protection Package" 
+            amount={2500}  // $25.00
+          />
         </div>
       </section>
     </>
