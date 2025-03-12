@@ -47,3 +47,15 @@ export const PRODUCT_QUERY =
       slug,
       basePrice
   }`);
+
+
+  export const PRODUCT_PAGE_QUERY = 
+   defineQuery(`*[_type == "product" && slug.current == $slug][0]{
+  name,
+  _id,
+  name,
+  description,
+  price,
+  "slug": slug.current,
+  "image": mainImage.asset->url
+   }`);

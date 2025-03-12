@@ -1,67 +1,169 @@
-import { PRODUCT_QUERY } from '@/sanity/lib/queries';
+'use client'
+
+import { PRODUCT_PAGE_QUERY } from '@/sanity/lib/queries';
 import { client } from '@/sanity/lib/client';
-import React from 'react'
+import React, { useState, use } from 'react'
 import { notFound } from "next/navigation"
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
-import Image from 'next/image';
 import markdownit from 'markdown-it';
 
 const md = markdownit()
 
-const Page = async ({ params }: { params: { slug: string } }) => {
-  const slug = params.slug;
+// This async function needs to be separated since we're in a client component
+async function getProductData(slug: string) {
+  return await client.fetch(PRODUCT_PAGE_QUERY, { slug });
+}
+
+
+const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
+  const unwrappedParams = use(params);
+  const slug = unwrappedParams.slug;
   
-const post = await client.fetch(PRODUCT_QUERY, { slug });
+  const [showForm, setShowForm] = useState(false);
+  const [post, setPost] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [parsedContent, setParsedContent] = useState('');
 
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getProductData(slug);
+        if (!data) {
+          notFound();
+          return;
+        }
+        setPost(data);
+        setParsedContent(md.render(data?.content || ''));
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-if(!post) return notFound()
+    fetchData();
+  }, [slug]);
 
-const parsedContent = md.render(post?.content || '');
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
+
+  if (!post) return null;
 
   return (
     <>
-    <section className="hero_container !min-h-[230px]">
-        <p className="tag">{formatDate(post?._createdAt)}</p>
+      <section className="hero_container !min-h-[180px]">
         <h1 className="text-3xl">{post.title}</h1>
         <p className="sub-heading !max-w-5xl">{post.description}</p>
-    </section>
-    <section className="section_container">
-        <div className="space-y-5 mt-10 max-w-4xl mx-auto">
-            <div className="flex-between gap-5">
-            <Link 
-                href={`/user/${post.author?._id}`}
-                className="flex items-center mb-3 gap-2"    
-            >
-            <Image 
-                src={post.author.image} 
-                alt="avatar" 
-                width={64} 
-                height={64} 
-                className="rounded-full drop-shadow-lg"
-            />
-              <div>
-                <p className="text-20-medium">{post.author.name}</p>
-                <p className="text-16-medium !text-black-300">@{post.author.username}
-                </p>
-              </div> 
-            </Link>
-
-            <p className="category-tag">{post.category}</p>
-        </div>
-        <h3>Details</h3>
-        {parsedContent ? (
-            <article
-                className="prose max-w-4xl font-work-sans"
-                dangerouslySetInnerHTML={{ __html: parsedContent }}
-
-            />
-        ) : (
-            <p className="no-result">No details provided</p>
-        )}
-        </div>
-    </section>
+      </section>
       
+      <section className="section_container py-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+          {/* Left Column - Container with animation */}
+          <div className="relative min-h-[500px]">
+            {/* Information Card */}
+            <div 
+              className={`absolute inset-0 bg-white p-6 rounded-lg shadow-md transition-all duration-500 ease-in-out ${
+                showForm ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              }`}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <p className="tag">{formatDate(post?._createdAt)}</p>
+                  <p className="category-tag">{post.category}</p>
+                </div>
+                
+                <h2 className="text-2xl font-bold">{post.title}</h2>
+                <p className="text-gray-600">{post.description}</p>
+                
+                {post.basePrice && (
+                  <div className="mt-4">
+                    <h3 className="text-lg font-semibold">Base Price</h3>
+                    <p className="text-xl font-bold text-emerald-600">${post.basePrice}</p>
+                  </div>
+                )}
+                
+                <div className="pt-4 border-t mt-4">
+                  <Link 
+                    href={`/user/${post.author?._id}`}
+                    className="flex items-center gap-2"    
+                  >
+                    <div>
+                      <p className="text-16-medium">{post.name}</p>
+                    </div> 
+                  </Link>
+                </div>
+                
+                <button 
+                  onClick={() => setShowForm(true)}
+                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition"
+                >
+                  Get Started
+                </button>
+              </div>
+            </div>
+            
+            {/* Form Card */}
+            <div 
+              className={`absolute inset-0 bg-white p-6 rounded-lg shadow-md transition-all duration-300 ease-in-out ${
+                showForm ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Get Started</h2>
+                  <button 
+                    onClick={() => setShowForm(false)}
+                    className="text-blue-600 hover:text-blue-800 transition"
+                  >
+                    ← Back
+                  </button>
+                </div>
+                
+                <form className="space-y-4">
+                  <div className="form-group">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" id="name" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter your name" />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter your email" />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input type="tel" id="phone" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter your phone number" />
+                  </div>
+                  
+                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition">
+                    Submit Request
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right Column - Legal Document Preview */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="border-b pb-4 mb-4">
+              <h2 className="text-2xl font-bold">Legal Document Preview</h2>
+              <p className="text-gray-600">Template for: {post.title}</p>
+            </div>
+            
+            <div className="prose max-w-none">
+              {parsedContent ? (
+                <article
+                  dangerouslySetInnerHTML={{ __html: parsedContent }}
+                />
+              ) : (
+                <p className="text-gray-500 italic">No document preview available</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
     </>
   )
 }
