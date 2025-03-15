@@ -110,13 +110,13 @@ export default async function Home({
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent mb-4"></div>
 
               {/* Testimonial logos in a responsive, evenly-spaced grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 place-items-center">
+              <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-2 place-items-center">
                 <Image
                   src="/trezorlogo.svg"
                   width={60}
                   height={60}
                   alt="Trezor Client Testimonial"
-                  className="max-w-[70px] w-full h-auto"
+                  className="max-w-[65px] w-full h-auto"
                 />
 
                 <Image
@@ -124,7 +124,7 @@ export default async function Home({
                   width={60}
                   height={60}
                   alt="Qure Client Testimonial"
-                  className="max-w-[65px] w-full h-auto"
+                  className="max-w-[60px] w-full h-auto pt-2"
                 />
 
                 <Image
@@ -132,7 +132,7 @@ export default async function Home({
                   width={60}
                   height={60}
                   alt="Vanguard Client Testimonial"
-                  className="max-w-[65px] w-full h-auto"
+                  className="max-w-[60px] w-full h-auto"
                 />
 
                 <Image
@@ -140,16 +140,9 @@ export default async function Home({
                   width={60}
                   height={60}
                   alt="Pikl Client Testimonial"
-                  className="max-w-[65px] w-full h-auto"
+                  className="max-w-[60px] w-full h-auto pt-2"
                 />
 
-                <Image
-                  src="/pikllogo.svg"
-                  width={60}
-                  height={60}
-                  alt="Pikl Client Testimonial"
-                  className="max-w-[65px] w-full h-auto"
-                />
               </div>
 
               {/* Bottom gradient line */}
