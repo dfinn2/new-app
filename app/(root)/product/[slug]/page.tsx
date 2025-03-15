@@ -5,6 +5,8 @@ import { client } from '@/sanity/lib/client';
 import React, { useState, use } from 'react'
 import { notFound } from "next/navigation"
 import markdownit from 'markdown-it';
+import BuyNowButton from '@/components/BuyNowButton';
+import { Button } from "@/components/ui/button";
 
 const md = markdownit()
 
@@ -13,14 +15,17 @@ async function getProductData(slug: string) {
   return await client.fetch(PRODUCT_PAGE_QUERY, { slug });
 }
 
-
 interface Product {
   title: string;
+  productId: string;
+  stripePriceId: string;
+  stripeProductId: string;
   description: string;
   name: string;
   category: string;
   basePrice?: number;
   content?: string;
+  _id: string;
 }
 
 const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
@@ -92,12 +97,12 @@ const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
                 
                 
                 
-                <button 
+                <Button 
                   onClick={() => setShowForm(true)}
-                  className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition"
+                  className="w-1/2"
                 >
                   Get Started
-                </button>
+                </Button>
               </div>
             </div>
             
@@ -138,6 +143,7 @@ const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
                     Submit Request
                   </button>
                 </form>
+                
               </div>
             </div>
           </div>
@@ -158,9 +164,24 @@ const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
                 <p className="text-gray-500 italic">No document preview available</p>
               )}
             </div>
+            
           </div>
         </div>
       </section>
+      <section className="section_container">
+        {/* Buy Now Button */}
+        <div className="max-w-md">
+                <BuyNowButton
+                  productId={post._id} 
+                  productName={post.name}
+                  price={post.basePrice || 0}
+                  description={post.description}
+                  stripePriceId={post.stripePriceId}
+                  stripeProductId={post.stripeProductId}
+                  slug={slug}
+                />
+        </div>
+        </section>
     </>
   )
 }

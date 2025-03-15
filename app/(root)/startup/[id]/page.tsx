@@ -51,7 +51,7 @@ const parsedContent = md.render(post?.content || '');
         <h3>Details</h3>
         {parsedContent ? (
             <article
-                className="prose max-w-4xl font-work-sans"
+                className="prose max-w-4xl"
                 dangerouslySetInnerHTML={{ __html: parsedContent }}
 
             />

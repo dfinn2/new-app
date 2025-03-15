@@ -18,25 +18,6 @@ export const STARTUPS_QUERY =
   image
 }`);
 
-
-// export const STARTUP_BY_ID_QUERY = 
-//    defineQuery(`*[_type == "startup"  && _id == $id][0]{
-//  _id, 
-//  title, 
-//  slug,
-//  _createdAt,
- // "author": author -> {
-//    "_id": _id, 
-//    "name": name, 
-//    "image": image, 
-//    "bio": bio
-//  }, 
-//  views, 
-//  description, 
-//  category,
-//  image
-//}`)
-
 export const PRODUCT_QUERY =
     defineQuery(`*[_type == "product"]{
       name,
@@ -44,18 +25,21 @@ export const PRODUCT_QUERY =
       details, 
       _id,
       productId,
-      slug,
-      basePrice
+      "slug": slug.current,
+      basePrice,
+      stripeProductId,
+      stripePriceId
   }`);
 
-
-  export const PRODUCT_PAGE_QUERY = 
+export const PRODUCT_PAGE_QUERY = 
    defineQuery(`*[_type == "product" && slug.current == $slug][0]{
-  name,
-  _id,
-  name,
-  description,
-  basePrice,
-  "slug": slug.current,
-  "image": mainImage.asset->url
+      _id,
+      name,
+      description,
+      "slug": slug.current,
+      "image": mainImage.asset->url,
+      basePrice,
+      content,
+      stripeProductId,
+      stripePriceId
    }`);

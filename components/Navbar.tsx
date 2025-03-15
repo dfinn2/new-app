@@ -10,14 +10,14 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { FileCheck2 } from "lucide-react";
+
 
 const Navbar = async () => {
   const session = await auth();
 
   return (
     <>
-      <header className="px-5 py-3 bg- shadow-sm font-work-sans">
+      <header className="px-5 py-3 bg-transparent shadow-sm">
         <nav className="flex justify-between items-center">
           <Link href="/">
             <Image src="/logo.png" alt="logo" width={144} height={30} />
@@ -26,19 +26,14 @@ const Navbar = async () => {
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Getting started</NavigationMenuTrigger>
+                  <NavigationMenuTrigger>Services</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
                       <li className="row-span-3">
                         <NavigationMenuLink asChild>
-                          <div className="bg-pine-cone-300">
-                            <Link
-                              className="flex h-full w-full select-none flex-col justify-end rounded-md bg-red p-6 no-underline outline-none focus:shadow-md"
-                              href="/"
-                            />
-                            <FileCheck2 size={96} />
+                          <div className="bg-gray-500 bg-[url(/sign_faded.png)] bg-opacity-50 bg-cover bg-center p-4 rounded-lg">
                             <span className="mb-2 mt-4 text-lg font-medium">
-                              shadcn/ui
+                              NNN Agreement
                             </span>
                             <p className="text-sm leading-tight text-muted-foreground">
                               Beautifully designed components built with Radix
@@ -75,7 +70,8 @@ const Navbar = async () => {
                   <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-                      BlahBlah
+                      <li>BlahBlah</li>
+                      <li>Underwear</li>
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -102,7 +98,7 @@ const Navbar = async () => {
                     type="submit"
                     className="max-sm:hidden"
                   >
-                    Logout
+                    X
                   </Button>
                 </form>
 

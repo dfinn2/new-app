@@ -7,10 +7,7 @@ export type ProductTypeCard = {
   category: string;
   description: string;
   _id: string;
-  slug: {
-    current: string;
-    type?: string;
-    },
+  slug: string;
   basePrice: number;
   
 };
@@ -28,6 +25,8 @@ const ProductCard = ({ post }: { post: ProductTypeCard }) => {
         <p className="text-gray-600 mb-4 line-clamp-3 flex-grow">
           {description}
         </p>
+        <p>{category}</p>
+        <p>{_id}</p>
         
         <div className="flex items-center justify-between mt-auto">
           <p className="font-bold text-lg">
@@ -35,8 +34,8 @@ const ProductCard = ({ post }: { post: ProductTypeCard }) => {
           </p>
           
           <Button asChild variant="default" size="sm">
-            <Link href={`/product/${slug.current}`}>
-              View Details
+            <Link href={`/product/${slug}`}>
+              Get Started
             </Link>
           </Button>
         </div>

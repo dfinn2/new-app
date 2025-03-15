@@ -5,12 +5,12 @@ import { Phone, Mail, Facebook, Twitter, Instagram, Linkedin } from 'lucide-reac
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white">
+    <footer className="bg-gray-900 text-white text-xs">
       <div className="container mx-auto px-2 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* First Address Column */}
           <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Main Office</h3>
+            <h3 className="text-lg font-semibold">Main Office</h3>
             <div className="flex items-start ml-2">
                 <p className="text-gray-300">
                     123 Business Avenue<br />
@@ -28,14 +28,14 @@ const Footer = () => {
             </div>
             
             {/* Map placeholder - can be replaced with actual MapBox integration */}
-            <div className="h-40 bg-gray-800 rounded-md flex items-center justify-center mt-3 border border-gray-700">
+            <div className="h-30 w-50 bg-gray-800 rounded-md flex items-center justify-center mt-3 border border-gray-700">
               <p className="text-sm text-gray-400">Interactive Map</p>
             </div>
           </div>
           
           {/* Second Address Column */}
           <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Regional Office</h3>
+            <h3 className="text-lg font-semibold">China Office</h3>
             <div className="flex items-start ml-2">
                 <p className="text-gray-300">
                     123 Business Avenue<br />
@@ -53,14 +53,14 @@ const Footer = () => {
             </div>
             
             {/* Map placeholder - can be replaced with actual MapBox integration */}
-            <div className="h-40 bg-gray-800 rounded-md flex items-center justify-center mt-3 border border-gray-700">
+            <div className="h-30 w-50 bg-gray-800 rounded-md flex items-center justify-center mt-3 border border-gray-700">
               <p className="text-sm text-gray-400">Interactive Map</p>
             </div>
           </div>
           
           {/* Sitemap Column */}
           <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Sitemap</h3>
+            <h3 className="text-lg font-semibold">Sitemap</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/" className="text-gray-300 hover:text-white transition-colors">
@@ -97,7 +97,7 @@ const Footer = () => {
           
           {/* Legal and Contact Column */}
           <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Legal</h3>
+            <h3 className="text-lg font-semibold">Legal</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">

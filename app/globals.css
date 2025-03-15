@@ -6,8 +6,28 @@
  
 
 
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-work-sans), system-ui, sans-serif;
+    
+  }
+
+}
+
+
+@layer utilities {
+  .font-work-sans {
+    font-family: var(--font-work-sans), system-ui, sans-serif;
+  }
+}
+
 :root {
-  --background: oklch(0.94 0.0068 277);
+  --background: slate-100;
   --foreground: oklch(0.145 0 0);
   --card: oklch(0.94 0.0068 277);
   --card-foreground: oklch(0.145 0 0);
@@ -97,11 +117,6 @@
 
 
 
-@theme {
-
---font-work-sans: 'Work Sans', sans-serif;
-
-		}
 
 @theme inline {
       --color-background: var(--background);
@@ -190,17 +205,10 @@
       --color-iron-400: var(--color-iron-400);
       --color-iron-500: var(--color-iron-500);
       --color-iron-600: var(--color-iron-600);
+      --font-work-sans: var(--font-work-sans), system-ui, sans-serif;
     }
  
-  @layer base {
-      * {
-        @apply border-border outline-ring/50;
-      }
-      body {
-        @apply bg-background text-foreground;
-      }
-    }
-    
+  
 @utility hero_container {
       @apply w-full bg-black min-h-[530px] pattern flex justify-center items-center flex-col py-10 px-6;
     }
