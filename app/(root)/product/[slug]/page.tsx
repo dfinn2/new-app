@@ -1,16 +1,13 @@
-'use client'
+'use client';
 
-import { PRODUCT_PAGE_QUERY } from '@/sanity/lib/queries';
-import { client } from '@/sanity/lib/client';
-import React, { useState, use } from 'react'
-import { notFound } from "next/navigation"
-import markdownit from 'markdown-it';
+import React, { useState, useCallback, useEffect } from 'react';
+import { notFound, useParams } from 'next/navigation';
+import { client } from "@/sanity/lib/client";
+import { PRODUCT_PAGE_QUERY } from "@/sanity/lib/queries";
+import { getFormComponent } from '@/components/product-forms/registry';
+import { getPreviewComponent } from '@/components/product-previews/registry';
 import BuyNowButton from '@/components/BuyNowButton';
-import { Button } from "@/components/ui/button";
 
-const md = markdownit()
-
-// This async function needs to be separated since we're in a client component
 async function getProductData(slug: string) {
   return await client.fetch(PRODUCT_PAGE_QUERY, { slug });
 }
@@ -28,25 +25,36 @@ interface Product {
   _id: string;
 }
 
-const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
-  const unwrappedParams = use(params);
-  const slug = unwrappedParams.slug;
+export default function ProductPage() {
+  const { slug } = useParams();
+  const productSlug = Array.isArray(slug) ? slug[0] : slug!;
   
-  const [showForm, setShowForm] = useState(false);
-  const [post, setPost] = useState<Product | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [parsedContent, setParsedContent] = useState('');
+  const [formData, setFormData] = useState<unknown>({});
+  const [showForm, setShowForm] = useState(false);
+  const [generatingDocument, setGeneratingDocument] = useState(false);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  // Get the appropriate form component and schema based on the product slug
+  const { Component: FormComponent, schema } = getFormComponent(productSlug);
+  const PreviewComponent = getPreviewComponent(productSlug);
+
+  // Fetch product data from Sanity
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getProductData(slug);
+        setLoading(true);
+        if (!productSlug) {
+          notFound();
+          return;
+        }
+        const data = await getProductData(productSlug);
         if (!data) {
           notFound();
           return;
         }
-        setPost(data);
-        setParsedContent(md.render(data?.content || ''));
+        setProduct(data);
       } catch (error) {
         console.error("Failed to fetch product:", error);
       } finally {
@@ -54,136 +62,164 @@ const Page = ({ params }: { params: Promise<{ slug: string }> }) => {
       }
     };
 
-    fetchData();
-  }, [slug]);
+    if (productSlug) {
+      fetchData();
+    }
+  }, [productSlug]);
+
+  // Handle form data changes (for real-time preview)
+  const handleFormChange = useCallback((newData: unknown) => {
+    setFormData((prevData: unknown) => {
+      const prevObj = typeof prevData === 'object' && prevData !== null ? prevData : {};
+      const newObj = typeof newData === 'object' && newData !== null ? newData : {};
+      return {...prevObj, ...newObj};
+    });
+  }, []);
+
+  // Handle form submission
+  const handleFormSubmit = async (data: unknown) => {
+    try {
+      setGeneratingDocument(true);
+      
+      // Validate with the schema
+      const validData = schema.parse(data);
+      
+      // Here you would send this data to your API
+      console.log("Generating document with:", validData);
+      
+      // Example API call:
+      // const response = await fetch('/api/generate-document', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     documentType: productSlug,
+      //     data: validData,
+      //   }),
+      // });
+      // 
+      // if (response.ok) {
+      //   const result = await response.json();
+      //   setDocumentUrl(result.documentUrl);
+      // }
+      
+      // Simulate API call for now
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setDocumentUrl('/sample-document.pdf');
+      
+    } catch (error) {
+      console.error("Failed to generate document:", error);
+    } finally {
+      setGeneratingDocument(false);
+    }
+  };
 
   if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <div className="container mx-auto px-4 py-20 text-center">Loading product details...</div>;
   }
 
-  if (!post) return null;
+  if (!product) {
+    return notFound();
+  }
 
   return (
-    <>
-      <section className="hero_container !min-h-[180px]">
-        <h1 className="text-3xl">{post.title}</h1>
-        <p className="sub-heading !max-w-5xl">{post.description}</p>
-      </section>
-      
-      <section className="section_container py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
-          {/* Left Column - Container with animation */}
-          <div className="relative min-h-[500px]">
-            {/* Information Card */}
-            <div 
-              className={`absolute inset-0 bg-white p-6 rounded-lg shadow-md transition-all duration-500 ease-in-out ${
-                showForm ? 'opacity-0 pointer-events-none' : 'opacity-100'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">{post.name}</h2>
-                  <p className="category-tag">{post.category}</p>
-                </div>
-                                
-                <p className="text-gray-600">YYY {post.description}</p>
-                
-                {post.basePrice && (
-                  <div className="mt-4">
-                    <h3 className="text-lg font-semibold">Base Price</h3>
-                    <p className="text-xl font-bold text-emerald-600">${post.basePrice}</p>
-                  </div>
-                )}
-                
-                
-                
-                <Button 
-                  onClick={() => setShowForm(true)}
-                  className="w-1/2"
-                >
-                  Get Started
-                </Button>
+    <section className="section_container py-10 pb-26">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+        {/* Left Column - Container with animation */}
+        <div className="relative min-h-[500px] max-h-[80vh] overflow-auto">
+          {/* Information Card */}
+          <div 
+            className={`absolute inset-0 bg-white p-6 rounded-lg shadow-md transition-all duration-500 ease-in-out ${
+              showForm ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">{product.name}</h2>
+                <p className="category-tag">{product.category}</p>
               </div>
-            </div>
-            
-            {/* Form Card */}
-            <div 
-              className={`absolute inset-0 bg-white p-6 rounded-lg shadow-md transition-all duration-300 ease-in-out ${
-                showForm ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Get Started</h2>
-                  <button 
-                    onClick={() => setShowForm(false)}
-                    className="text-blue-600 hover:text-blue-800 transition"
-                  >
-                    ← Back
-                  </button>
+                          
+              <p className="text-gray-600">{product.description}</p>
+              
+              {product.basePrice && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold">Base Price</h3>
+                  <p className="text-xl font-bold text-emerald-600">${product.basePrice}</p>
                 </div>
+              )}
+              
+              {/* Buy Now and Custom Quote buttons */}
+              <div className="mt-6 space-y-4">
+                <BuyNowButton
+                  productId={product._id} 
+                  productName={product.name}
+                  price={product.basePrice || 0}
+                  description={product.description}
+                  stripePriceId={product.stripePriceId}
+                  stripeProductId={product.stripeProductId}
+                  slug={productSlug}
+                />
                 
-                <form className="space-y-4">
-                  <div className="form-group">
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" id="name" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter your name" />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="email" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter your email" />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                    <input type="tel" id="phone" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter your phone number" />
-                  </div>
-                  
-                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition">
-                    Submit Request
-                  </button>
-                </form>
+                <p className="text-center text-gray-500 text-sm">or</p>
                 
+                <button 
+                  onClick={() => setShowForm(true)}
+                  className="w-full border border-gray-300 bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50"
+                >
+                  Customize Document
+                </button>
               </div>
             </div>
           </div>
           
-          {/* Right Column - Legal Document Preview */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="border-b pb-4 mb-4">
-              <h2 className="text-2xl font-bold">Legal Document Preview</h2>
-              <p className="text-gray-600">Template for: {post.title}</p>
+          {/* Dynamic Form Component with Zod validation */}
+          <div 
+            className={`absolute inset-0 bg-white p-6 transition-all duration-300 ease-in-out ${
+              showForm ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Customize Your {product.name}</h2>
+              <button 
+                onClick={() => setShowForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                &times; Close
+              </button>
             </div>
             
-            <div className="prose max-w-none">
-              {parsedContent ? (
-                <article
-                  dangerouslySetInnerHTML={{ __html: parsedContent }}
-                />
-              ) : (
-                <p className="text-gray-500 italic">No document preview available</p>
-              )}
-            </div>
+            <FormComponent 
+              product={product}
+              schema={schema}
+              onChange={handleFormChange}
+              onSubmit={handleFormSubmit}
+            />
             
+            {documentUrl && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-green-700 font-medium">Document successfully generated!</p>
+                <a 
+                  href={documentUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline mt-2 inline-block"
+                >
+                  Download your document
+                </a>
+              </div>
+            )}
           </div>
         </div>
-      </section>
-      <section className="section_container">
-        {/* Buy Now Button */}
-        <div className="max-w-md">
-                <BuyNowButton
-                  productId={post._id} 
-                  productName={post.name}
-                  price={post.basePrice || 0}
-                  description={post.description}
-                  stripePriceId={post.stripePriceId}
-                  stripeProductId={post.stripeProductId}
-                  slug={slug}
-                />
+        
+        {/* Right Column - Dynamic Preview Component with real-time updates */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold mb-4">Document Preview</h2>
+          <PreviewComponent 
+            product={product}
+            formData={formData}
+            isGenerating={generatingDocument}
+          />
         </div>
-        </section>
-    </>
-  )
+      </div>
+    </section>
+  );
 }
-
-export default Page
