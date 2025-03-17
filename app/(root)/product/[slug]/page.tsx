@@ -84,7 +84,7 @@ export default function ProductPage() {
       // Validate with the schema
       const validData = schema.parse(data);
       
-      // Here you would send this data to your API
+      
       console.log("Generating document with:", validData);
       
       // Example API call:

@@ -1,30 +1,37 @@
-// components/NNNAgreementForm.tsx
+// components/product-forms/NnnAgreementForm.tsx
 import { useEffect, useState, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { nnnAgreementSchema, NNNAgreementFormData } from "@/schemas/nnnAgreementSchema";
 import { FormPage1, FormPage2, FormPage3, OrderConfirmation } from "@/components/form-pages/NnnFormPages";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
+
+interface ProductType {
+  _id: string;
+  name: string;
+  description?: string;
+  basePrice: number;
+  stripePriceId?: string;
+  stripeProductId?: string;
+  slug: string;
+}
 
 interface NNNAgreementFormProps {
-  product: any;
-  schema: any;
+  product: ProductType;
+  schema: z.ZodType<NNNAgreementFormData>;
   onChange: (data: Partial<NNNAgreementFormData>) => void;
   onSubmit: (data: NNNAgreementFormData) => void;
 }
 
-const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementFormProps) => {
+const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = 4; // Including confirmation page
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const firstRender = useRef(true);
+  const router = useRouter();
   
-  // Add states for document generation
-  const [generatingDocument, setGeneratingDocument] = useState(false);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const [pdfData, setPdfData] = useState<string | null>(null);
-  const [pdfFilename, setPdfFilename] = useState<string>('');
-  const [documentSuccess, setDocumentSuccess] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  // Add states for form processing
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const methods = useForm<NNNAgreementFormData>({
     mode: "onChange",
@@ -33,11 +40,11 @@ const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementF
       productTrademark: "notInterested",
       arbitration: "ICC International Court of Arbitration",
       penaltyDamages: "liquidatedDamages",
-      email: "", // Add email field with empty default
+      email: "", // Email field with empty default
     },
   });
   
-  const { handleSubmit, watch, formState, setError, clearErrors, register } = methods;
+  const { handleSubmit, watch, formState, setError: setFormError, clearErrors, register } = methods;
   
   // Watch for changes to update preview
   const formValues = watch();
@@ -61,10 +68,11 @@ const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementF
   
   const validateFields = async (fieldsToValidate: string[]) => {
     // Create a partial schema with only the fields we want to validate
-    const partialSchema: any = {};
+    const partialSchema: Record<string, z.ZodTypeAny> = {};
     fieldsToValidate.forEach(field => {
       // Get the field's schema from the main schema
-      const fieldSchema = (nnnAgreementSchema as any).shape[field];
+      const schema = nnnAgreementSchema.shape as Record<string, z.ZodTypeAny>;
+      const fieldSchema = schema[field];
       if (fieldSchema) {
         partialSchema[field] = fieldSchema;
       }
@@ -75,29 +83,30 @@ const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementF
     
     try {
       // Only validate the specified fields
-      const dataToValidate: any = {};
+      const dataToValidate = {} as Partial<NNNAgreementFormData>;
       fieldsToValidate.forEach(field => {
-        dataToValidate[field] = formValues[field as keyof NNNAgreementFormData];
+        const key = field as keyof NNNAgreementFormData;
+        if (key in formValues) {
+          // Use type assertion to maintain the correct type
+          (dataToValidate as any)[key] = formValues[key];
+        }
       });
       
       validationSchema.parse(dataToValidate);
       clearErrors();
-      setValidationErrors({});
       return true;
+    
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors: Record<string, string> = {};
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const path = err.path.join('.');
-            errors[path] = err.message;
-            setError(path as any, { 
+            setFormError(path as keyof NNNAgreementFormData, { 
               type: 'manual', 
               message: err.message 
             });
           }
         });
-        setValidationErrors(errors);
       }
       return false;
     }
@@ -128,219 +137,98 @@ const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementF
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
   
-  // Updated form submission handler to generate PDF and enable download
+  // Direct payment handler - creates Stripe session and redirects
+  const processPayment = async () => {
+    try {
+      setProcessing(true);
+      setError(null);
+      
+      // Validate the form data first
+      const isValid = await methods.trigger();
+      if (!isValid) {
+        throw new Error("Please fix the form errors before continuing");
+      }
+      
+      const validatedData = methods.getValues();
+      
+      // Store form data in localStorage for retrieval after payment
+      localStorage.setItem('nnnAgreementFormData', JSON.stringify(validatedData));
+      
+      // Call the create-checkout-session API
+      const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productId: product._id,
+          productName: product.name,
+          price: product.basePrice * 100, // Convert to cents
+          description: product.description || '',
+          stripePriceId: product.stripePriceId,
+          stripeProductId: product.stripeProductId,
+          slug: product.slug,
+          email: validatedData.email || '',
+        }),
+      });
+      
+      // Handle API response
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Payment session creation failed");
+      }
+      
+      const data = await response.json();
+      
+      // Redirect to Stripe checkout
+      if (data.url) {
+        console.log("Redirecting to Stripe checkout:", data.url);
+        router.push(data.url);
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Error initiating payment:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setProcessing(false);
+    }
+  };
+  
+  // Form submission handler
   const handleFormSubmit = async (data: NNNAgreementFormData) => {
     try {
       // Reset error state
-      setDocumentError(null);
+      setError(null);
       
       // Validate the entire form data
       const validatedData = nnnAgreementSchema.parse(data);
-      setValidationErrors({});
       
-      // Call the original onSubmit (to maintain compatibility)
+      // Call the original onSubmit (for compatibility)
       onSubmit(validatedData);
       
-      // Start document generation
-      setGeneratingDocument(true);
-      
-      try {
-        // Call the API to generate the PDF with longer timeout
-        const response = await fetch('/api/generate-pdf', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            documentType: 'nnn-agreement',
-            data: validatedData,
-            userEmail: validatedData.email || '',
-          }),
-        });
-        
-        // First check if the response is valid
-        if (!response.ok) {
-          let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
-          
-          // Try to parse error message from JSON
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (parseError) {
-            // If response is empty or invalid JSON
-            console.error('Error parsing error response:', parseError);
-            
-            // Try to get response as text instead
-            try {
-              const errorText = await response.text();
-              // If we got response text, use it for debugging
-              if (errorText && errorText.length > 0) {
-                console.error('Server returned non-JSON response:', errorText.substring(0, 500));
-                errorMessage = 'Server returned invalid response format';
-              } else {
-                errorMessage = 'Server returned empty response';
-              }
-            } catch (textError) {
-              console.error('Could not read error response body', textError);
-            }
-          }
-          
-          throw new Error(errorMessage);
-        }
-        
-        // Get the PDF data from the response - with proper error handling for truncation
-        let responseData;
-        try {
-          // First get response as text
-          const responseText = await response.text();
-          
-          // Check if text is empty
-          if (!responseText || responseText.trim() === '') {
-            throw new Error('Response is empty');
-          }
-          
-          // Try to parse JSON from text
-          try {
-            responseData = JSON.parse(responseText);
-          } catch (jsonError) {
-            console.error('Invalid JSON in response:', responseText.substring(0, 500));
-            throw new Error('Server returned invalid JSON');
-          }
-        } catch (readError) {
-          console.error('Error reading response:', readError);
-          throw new Error('Failed to read server response');
-        }
-        
-        // Validate response data
-        if (!responseData) {
-          throw new Error('Response data is missing');
-        }
-        
-        if (!responseData.success) {
-          const errorMsg = responseData.message || responseData.error || 'Failed to generate document';
-          throw new Error(errorMsg);
-        }
-        
-        // Verify PDF data exists
-        if (!responseData.pdfData) {
-          throw new Error('PDF data missing from response');
-        }
-        
-        // All checks passed - store the data
-        setPdfData(responseData.pdfData);
-        setPdfFilename(responseData.filename || 'nnn-agreement.pdf');
-        setEmailSent(responseData.emailSent);
-        
-        // Set success state
-        setDocumentSuccess(true);
-        
-      } catch (requestError) {
-        console.error("Request error:", requestError);
-        throw requestError;
-      }
+      // Process payment directly
+      await processPayment();
       
     } catch (error) {
-      console.error("Error generating document:", error);
+      console.error("Error processing form:", error);
       
       if (error instanceof z.ZodError) {
-        const errors: Record<string, string> = {};
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const path = err.path.join('.');
-            errors[path] = err.message;
-            setError(path as any, { 
+            setFormError(path as keyof NNNAgreementFormData, { 
               type: 'manual', 
               message: err.message 
             });
           }
         });
-        setValidationErrors(errors);
       } else {
-        setDocumentError(error instanceof Error ? error.message : 'An unknown error occurred');
+        setError(error instanceof Error ? error.message : 'An unknown error occurred');
       }
-    } finally {
-      setGeneratingDocument(false);
     }
   };
   
-  // Handle document download
-  const handleDownloadPDF = () => {
-    if (!pdfData) return;
-    
-    // Create a link and trigger download
-    const link = document.createElement('a');
-    link.href = `data:application/pdf;base64,${pdfData}`;
-    link.download = pdfFilename || 'nnn-agreement.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  // If document generation was successful, show download UI
-  if (documentSuccess && pdfData) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-center p-6">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor" 
-            className="w-8 h-8 text-green-600"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Document Ready!</h2>
-        
-        <p className="text-gray-600 mb-6">
-          {emailSent 
-            ? 'Your document has been generated and sent to your email.' 
-            : 'Your document has been generated successfully.'}
-        </p>
-        
-        <button
-          onClick={handleDownloadPDF}
-          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-        >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor" 
-            className="w-5 h-5 mr-2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Download Document
-        </button>
-        
-        <button
-          onClick={() => {
-            setDocumentSuccess(false);
-            setPdfData(null);
-            setCurrentPage(1);
-          }}
-          className="mt-4 text-gray-500 hover:text-gray-700"
-        >
-          Create another document
-        </button>
-      </div>
-    );
-  }
-  
-  // During document generation, show loading state
-  if (generatingDocument) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-        <p className="text-gray-600">Generating your document...</p>
-      </div>
-    );
-  }
-  
-  // Normal form view
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="h-full flex flex-col">
@@ -374,9 +262,9 @@ const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementF
         </div>
         
         {/* Error message */}
-        {documentError && (
+        {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
-            {documentError}
+            {error}
           </div>
         )}
         
@@ -404,11 +292,22 @@ const NNNAgreementForm = ({ product, schema, onChange, onSubmit }: NNNAgreementF
             </button>
           ) : (
             <button
-              type="submit"
-              disabled={generatingDocument}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              type="button"
+              onClick={processPayment}
+              disabled={processing}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center"
             >
-              {generatingDocument ? 'Generating...' : 'Generate Document'}
+              {processing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </>
+              ) : (
+                'Proceed to Payment'
+              )}
             </button>
           )}
         </div>

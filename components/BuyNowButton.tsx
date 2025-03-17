@@ -39,6 +39,10 @@ export default function BuyNowButton({
       setLoading(true);
       setError(null);
 
+      // Get form data from localStorage if available
+      const formDataString = localStorage.getItem('nnnAgreementFormData');
+      const formData = formDataString ? JSON.parse(formDataString) : null;
+
       console.log("Creating checkout for:", {
         productName,
         price,
@@ -60,6 +64,8 @@ export default function BuyNowButton({
           stripePriceId, // Pass the Stripe Price ID if available
           stripeProductId, // Pass the Stripe Product ID if available
           slug, // Add slug for cancel URL
+          // Add email if available for receipt email
+          email: formData?.email || '',
         }),
       });
 

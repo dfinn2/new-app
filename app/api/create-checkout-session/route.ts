@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -21,7 +20,9 @@ export async function POST(request: NextRequest) {
       price, 
       description, 
       stripePriceId, 
-      stripeProductId 
+      stripeProductId,
+      slug,
+      email 
     } = body;
     
     // Create session parameters
@@ -29,8 +30,14 @@ export async function POST(request: NextRequest) {
       payment_method_types: ["card"],
       mode: "payment",
       success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/product/${body.slug || productId}`,
+      cancel_url: `${baseUrl}/product/${slug || productId}`,
     };
+    
+    // Add customer email if provided
+    if (email) {
+      console.log("Setting customer email:", email);
+      params.customer_email = email;
+    }
     
     // If stripePriceId exists, use it directly
     if (stripePriceId) {
@@ -110,11 +117,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-/* FUTURE IMPROVEMENTS:
- * 1. Add webhook support to reliably capture payment events
- * 2. Store order details in your database
- * 3. Implement inventory management
- * 4. Add customer information to Stripe Customer object
- * 5. Support for recurring subscriptions
- */

@@ -1,5 +1,5 @@
-// lib/agreement-templates.ts
-import { NNNAgreementFormData } from '@/schema/nnnAgreementSchema';
+// lib/agreement-templates/agreement-templates.ts
+import { NNNAgreementFormData } from '@/schemas/nnnAgreementSchema';
 
 export function renderNNNAgreementHTML(data: NNNAgreementFormData): string {
   // Format current date

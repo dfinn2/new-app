@@ -1,6 +1,4 @@
-// Update your existing nnnAgreementSchema to include the email field
-// You can add this to your existing schema file
-
+// schemas/nnnAgreementSchema.ts
 import { z } from "zod";
 
 // Custom USCC validation function
