@@ -2,6 +2,8 @@
     [ ] repurpose startup cards structure for knowledgbase
     [ ]
 
+## Implement Dashboard
+    [ ] 
 
 ## Terms and Conditions
     [ ]
@@ -27,3 +29,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## External Tools
 PDFSHift - Pdf generation, max 50 per month
 Mailgun - email sending 
+.\stripe login
+npx supabase login
