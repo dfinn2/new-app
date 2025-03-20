@@ -35,7 +35,7 @@ export default async function PrivatePage() {
   
   // Get purchase items through user purchases
   let purchaseItemsData = null;
-  let purchaseItemsError = null;
+  let purchaseItemsError = null;  
   
   if (purchasesData && purchasesData.length > 0) {
     // Get the purchase IDs

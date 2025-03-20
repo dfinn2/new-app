@@ -1,22 +1,42 @@
 // app/(dashboard)/dashboard/documents/page.tsx
 import { auth } from "@/auth";
-import { getUserPurchases } from "@/lib/db/purchases";
+//import { getUserPurchases } from "@/lib/supabase/purchases";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { FileText, Download, ExternalLink } from "lucide-react";
+import { FileText, Download, ExternalLink, Book } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/server";
 
 export default async function DocumentsPage() {
   const session = await auth();
   const userId = session?.user?.id as string;
   
-  // Fetch all user purchases, which include documents
-  const documents = await getUserPurchases(userId);
+  // Fetch user's purchased documents - use a different variable name for clarity
+  // const userDocuments = await getUserPurchases(userId);
+  
+
+  // Fetch all available documents from the documents table
+  let availableDocuments = [];
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*');
+    
+
+    if (error) {
+      console.error('Error fetching available documents:', error);
+    } else {
+      availableDocuments = data || [];
+    }
+  } catch (error) {
+    console.error('Error with Supabase client:', error);
+  }
   
   const getDocumentTypeName = (doc: any) => {
     if (doc.document_type) return doc.document_type;
-    if (doc.product_name.toLowerCase().includes('nnn')) return 'NNN Agreement';
-    if (doc.product_name.toLowerCase().includes('oem')) return 'OEM Agreement';
+    if (doc.product_name?.toLowerCase().includes('nnn')) return 'NNN Agreement';
+    if (doc.product_name?.toLowerCase().includes('oem')) return 'OEM Agreement';
     return 'Legal Document';
   };
   
@@ -27,6 +47,7 @@ export default async function DocumentsPage() {
   
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Existing My Documents section */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Documents</h1>
         <Button asChild>
@@ -36,7 +57,8 @@ export default async function DocumentsPage() {
         </Button>
       </div>
       
-      {documents.length === 0 ? (
+      {/* Existing My Documents section 
+      {userDocuments.length === 0 ? (
         <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
           <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-gray-400" />
@@ -51,7 +73,7 @@ export default async function DocumentsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {documents.map((doc) => (
+          {userDocuments.map((doc) => (
             <div key={doc.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -106,7 +128,8 @@ export default async function DocumentsPage() {
           ))}
         </div>
       )}
-      
+      */} 
+      {/* Document Categories section */}
       <div className="mt-12">
         <h2 className="text-xl font-bold mb-4">Document Categories</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -141,5 +164,79 @@ export default async function DocumentsPage() {
           </Link>
         </div>
       </div>
+      
+      {/* New section: Available Documents */}
+      <div className="mt-12 mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold">Available Documents</h2>
+          <Button asChild variant="outline">
+            <Link href="/product">
+              Browse All Products
+            </Link>
+          </Button>
+        </div>
+        
+        {!availableDocuments || availableDocuments.length === 0 ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm border text-center">
+            <p className="text-gray-500">No available documents found in the catalog.</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {availableDocuments.slice(0, 5).map((doc) => (
+                    <tr key={doc.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Book className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{doc.title || doc.name}</div>
+                            <div className="text-sm text-gray-500">ID: {doc.id.substring(0, 8)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {doc.document_type || 'Standard Document'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="line-clamp-2">
+                          {doc.description || 'No description available'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Button asChild size="sm">
+                          <Link href={`/product/${doc.slug || doc.id}`}>
+                            View Details
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {availableDocuments.length > 5 && (
+              <div className="bg-gray-50 px-6 py-3 text-center">
+                <Link href="/product" className="text-blue-600 hover:underline text-sm">
+                  View all {availableDocuments.length} available documents
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
+}

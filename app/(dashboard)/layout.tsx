@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { auth } from "@/auth";
+import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -9,12 +9,16 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check if user is authenticated
-  const session = await auth();
+  // Get the Supabase client
+  const supabase = await createClient();
+  
+  // Check if user is authenticated using Supabase directly
+  const { data: { user }, error } = await supabase.auth.getUser();
   
   // If not authenticated, redirect to login
-  if (!session) {
-    redirect("/");
+  if (!user || error) {
+    console.log("Dashboard access denied - redirecting to login");
+    redirect("/login");
   }
   
   return (

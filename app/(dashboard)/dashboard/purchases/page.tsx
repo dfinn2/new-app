@@ -1,6 +1,8 @@
+
+/*
 // app/(dashboard)/dashboard/purchases/page.tsx
 import { auth } from "@/auth";
-import { getUserPurchases } from "@/lib/db/purchases";
+//import { getUserPurchases } from "@/lib/db/purchases";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { FileText, Download, Eye } from "lucide-react";
@@ -11,7 +13,7 @@ export default async function PurchasesPage() {
   const userId = session?.user?.id as string;
   
   // Fetch all user purchases
-  const purchases = await getUserPurchases(userId);
+  //const purchases = await getUserPurchases(userId);
   
   return (
     <div className="max-w-7xl mx-auto">
@@ -148,3 +150,5 @@ export default async function PurchasesPage() {
     </div>
   );
 }
+
+*/
