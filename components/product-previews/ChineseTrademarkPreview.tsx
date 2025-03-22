@@ -2,19 +2,8 @@
 import { useState } from "react";
 import { ChineseTrademarkFormData } from "@/schemas/chineseTrademarkSchema";
 import { FileText, AlertCircle, CheckCircle, Users, Globe, Clock } from "lucide-react";
+import { Product } from "@/lib/db/types";
 
-interface Product {
-  name: string;
-  category?: string;
-  description?: string;
-  basePrice?: number;
-  _id?: string;
-  productId?: string;
-  stripePriceId?: string;
-  stripeProductId?: string;
-  title?: string;
-  content?: string;
-}
 
 interface ChineseTrademarkPreviewProps {
   product: Product;

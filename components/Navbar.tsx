@@ -248,8 +248,12 @@ const Navbar = async () => {
                   </Button>
                 </Link>
                 
-                {/* Client-side Google sign-in button */}
-                <GoogleSignInNavButton />
+                {/* Sign Up button - only visible when user is not logged in */}
+                <Link href="/login?signup=true">
+                  <Button variant="default" type="button">
+                    Sign Up
+                  </Button>
+                </Link>
               </>
             )}
           </div>

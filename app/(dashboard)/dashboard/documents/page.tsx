@@ -1,29 +1,42 @@
 // app/(dashboard)/dashboard/documents/page.tsx
-import { auth } from "@/auth";
-//import { getUserPurchases } from "@/lib/supabase/purchases";
+import { createClient } from "@/utils/supabase/server";
+import { getUserDocuments } from "@/lib/db/userDocuments";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { FileText, Download, ExternalLink, Book } from "lucide-react";
+import { FileText, Download, ExternalLink, Book, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function DocumentsPage() {
-  const session = await auth();
-  const userId = session?.user?.id as string;
+  // Get the Supabase client
+  const supabase = await createClient();
   
-  // Fetch user's purchased documents - use a different variable name for clarity
-  // const userDocuments = await getUserPurchases(userId);
+  // Get authenticated user using Supabase directly
+  const { data: { user }, error } = await supabase.auth.getUser();
   
+  // If not authenticated, redirect to login
+  if (!user || error) {
+    redirect("/login");
+  }
+  
+  const userId = user.id;
+  
+  // Fetch user's purchased documents
+  let userDocuments = [];
+  try {
+    userDocuments = await getUserDocuments(userId);
+  } catch (error) {
+    console.error("Error fetching user documents:", error);
+  }
 
   // Fetch all available documents from the documents table
   let availableDocuments = [];
   try {
-    const supabase = await createClient();
     const { data, error } = await supabase
-      .from('documents')
-      .select('*');
+      .from('document_templates')
+      .select('*')
+      .eq('active', true);
     
-
     if (error) {
       console.error('Error fetching available documents:', error);
     } else {
@@ -45,9 +58,18 @@ export default async function DocumentsPage() {
     return doc.status === 'completed' ? 'Active' : 'Processing';
   };
   
+  const getStatusIcon = (status: string) => {
+    if (status === 'completed' || status === 'Active') {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    } else if (status === 'Processing' || status === 'pending') {
+      return <Clock className="h-4 w-4 text-amber-500" />;
+    }
+    return null;
+  };
+  
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Existing My Documents section */}
+      {/* My Documents section */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">My Documents</h1>
         <Button asChild>
@@ -57,14 +79,13 @@ export default async function DocumentsPage() {
         </Button>
       </div>
       
-      {/* Existing My Documents section 
       {userDocuments.length === 0 ? (
         <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
           <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-gray-400" />
           </div>
           <h2 className="text-xl font-medium mb-2">No documents yet</h2>
-          <p className="text-gray-500 mb-6">You haven't created any documents yet. Browse our products to get started.</p>
+          <p className="text-gray-500 mb-6">You haven&quot;t created any documents yet. Browse our products to get started.</p>
           <Button asChild>
             <Link href="/product">
               Browse Document Templates
@@ -80,12 +101,13 @@ export default async function DocumentsPage() {
                   <div className="p-2 bg-blue-50 rounded-lg">
                     <FileText className="h-6 w-6 text-blue-600" />
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
+                  <span className={`text-xs px-2 py-1 rounded-full flex items-center ${
                     getDocumentStatus(doc) === 'Active' 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-amber-100 text-amber-800'
                   }`}>
-                    {getDocumentStatus(doc)}
+                    {getStatusIcon(getDocumentStatus(doc))}
+                    <span className="ml-1">{getDocumentStatus(doc)}</span>
                   </span>
                 </div>
                 
@@ -117,7 +139,7 @@ export default async function DocumentsPage() {
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="flex-1">
-                    <Link href={`/dashboard/documents/${doc.id}/download`}>
+                    <Link href={`/api/documents/${doc.id}/download`}>
                       <Download className="h-4 w-4 mr-1" />
                       Download
                     </Link>
@@ -128,7 +150,7 @@ export default async function DocumentsPage() {
           ))}
         </div>
       )}
-      */} 
+      
       {/* Document Categories section */}
       <div className="mt-12">
         <h2 className="text-xl font-bold mb-4">Document Categories</h2>
@@ -165,7 +187,7 @@ export default async function DocumentsPage() {
         </div>
       </div>
       
-      {/* New section: Available Documents */}
+      {/* Available Documents section */}
       <div className="mt-12 mb-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">Available Documents</h2>

@@ -16,7 +16,7 @@ export default async function PrivatePage() {
   
   // Get user profile data
   const { data: profileData, error: profileError } = await supabase
-    .from('user_profile')
+    .from('user_profiles')
     .select('*')
     .eq('id', authData.user.id)
     .single()
@@ -26,7 +26,7 @@ export default async function PrivatePage() {
   
   // Get user purchases
   const { data: purchasesData, error: purchasesError } = await supabase
-    .from('user_purchases')
+    .from('document_purchases')
     .select('*')
     .eq('user_id', authData.user.id)
   
@@ -56,7 +56,7 @@ export default async function PrivatePage() {
   
   // Get documents data
   const { data: documentsData, error: documentsError } = await supabase
-    .from('documents')
+    .from('products')
     .select('*')
   
   console.log("Documents data:", documentsData)

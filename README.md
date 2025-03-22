@@ -9,6 +9,9 @@
     [ ]
     [ ]
 
+## Bugs / Fixes
+    [ ] Put signin requirement before start form - otherwise non-authenticated at checkout.
+
 ## Implement New Products
 1. Create a form component in components/product-forms/
 2. Create a preview component in components/product-previews/

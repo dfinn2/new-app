@@ -4,6 +4,7 @@ import axios from 'axios';
 import { renderNNNAgreementHTML } from '@/lib/agreement-templates/agreement-templates';
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
+import { createClient } from '@/utils/supabase/server';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mg: any = null;
@@ -27,6 +28,89 @@ try {
 // Define global btoa function for Node.js environment
 const btoa = (text: string) => Buffer.from(text).toString('base64');
 
+// Function to save PDF to Supabase Storage
+async function savePdfToStorage(pdfBuffer: Buffer, filename: string, userId: string) {
+  try {
+    console.log("Saving PDF to Supabase Storage");
+    
+    // Initialize Supabase server client
+    const supabase = await createClient();
+    
+    // Verify the user exists and is authenticated
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      throw new Error("Failed to authenticate: " + (authError?.message || "User not found"));
+    }
+    
+    // Define the storage path based on user ID
+    const filePath = `${userId}/${filename}`;
+    
+    // Upload file to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .upload(filePath, pdfBuffer, {
+        contentType: 'application/pdf',
+        cacheControl: '3600',
+        upsert: true
+      });
+    
+    if (error) {
+      throw error;
+    }
+    
+    console.log("PDF uploaded successfully to storage:", data);
+    
+    // Get the public URL of the uploaded file
+    const { data: urlData } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath);
+    
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error uploading PDF to Supabase Storage:', error);
+    throw error;
+  }
+}
+
+// Function to save document record to database
+async function saveDocumentToDatabase(
+  userId: string, 
+  filename: string, 
+  filePath: string, 
+  documentType: string
+) {
+  try {
+    console.log("Saving document record to database");
+    
+    // Initialize Supabase server client
+    const supabase = await createClient();
+    
+    // Insert record into documents table
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
+        user_id: userId,
+        title: filename,
+        file_path: filePath,
+        document_type: documentType,
+        status: 'completed',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    console.log("Document record saved:", data);
+    return data.id;
+  } catch (error) {
+    console.error('Error saving document record:', error);
+    throw error;
+  }
+}
+
 // Export for POST requests
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +118,7 @@ export async function POST(request: NextRequest) {
     
     // Parse the request body
     const requestData = await request.json();
-    const { documentType, data, userEmail } = requestData;
+    const { documentType, data, userEmail, userId } = requestData;
     
     if (!documentType || !data) {
       console.error('Missing required fields in request');
@@ -82,6 +166,35 @@ export async function POST(request: NextRequest) {
       // Base64 encoded minimal PDF for testing
       const base64Pdf = "JVBERi0xLjMKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwgL0xlbmd0aCA1IDAgUiAvRmlsdGVyIC9GbGF0ZURlY29kZSA+PgpzdHJlYW0KeAFLSyzIUAhLLSrOzM9TKMlXSEosqlRIrShiBABLnwbHCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago0NQplbmRvYmoKMiAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDMgMCBSIC9SZXNvdXJjZXMgNiAwIFIgL0NvbnRlbnRzIDQgMCBSIC9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCj4+CmVuZG9iagozIDAgb2JqCjw8IC9UeXBlIC9QYWdlcyAvS2lkcyBbIDIgMCBSIF0gL0NvdW50IDEgPj4KZW5kb2JqCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgL1BhZ2VzIDMgMCBSID4+CmVuZG9iago2IDAgb2JqCjw8IC9Qcm9jU2V0IFsgL1BERiBdID4+CmVuZG9iagp4cmVmCjAgNwowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAyNTYgMDAwMDAgbiAKMDAwMDAwMDA5MCAwMDAwMCBuIAowMDAwMDAwMTk5IDAwMDAwIG4gCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NyAwMDAwMCBuIAowMDAwMDAwMzA1IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNyAvUm9vdCAxIDAgUiAvSUQgWyA8MzFjMWJmNjM5MTAzYmNjYTRmNjQ0NDM3YzdhZWYyNTc+CjwzMWMxYmY2MzkxMDNiY2NhNGY2NDQ0MzdjN2FlZjI1Nz4gXSA+PgpzdGFydHhyZWYKMzM0CiUlRU9GCg==";
       
+      // Create a binary buffer from the base64 string
+      const pdfBuffer = Buffer.from(base64Pdf, 'base64');
+      
+      // If userId is provided, save to Supabase Storage
+      let fileUrl = null;
+      let documentId = null;
+      
+      if (userId) {
+        try {
+          // Verify user exists in Supabase
+          const supabase = await createClient();
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+          
+          if (userError || !userData.user) {
+            console.error("Invalid or non-existent user ID:", userError || "User not found");
+            // Continue without storage since we can't verify the user
+          } else {
+            // Save PDF to storage
+            fileUrl = await savePdfToStorage(pdfBuffer, filename, userId);
+            
+            // Save document record to database
+            documentId = await saveDocumentToDatabase(userId, filename, fileUrl, documentType);
+          }
+        } catch (storageError) {
+          console.error("Storage/database error:", storageError);
+          // Continue without storage - the user will still get the PDF
+        }
+      }
+      
       // Log what would happen in production
       if (userEmail) {
         console.log("In production, would send email to:", userEmail);
@@ -91,6 +204,8 @@ export async function POST(request: NextRequest) {
         success: true,
         filename,
         pdfData: base64Pdf,
+        fileUrl,
+        documentId,
         emailSent: false
       });
     }
@@ -116,6 +231,8 @@ export async function POST(request: NextRequest) {
     }
     
     let emailSent = false;
+    let fileUrl = null;
+    let documentId = null;
     
     console.log("Calling PDFShift API to generate PDF");
     let pdfBuffer: Buffer;
@@ -151,6 +268,20 @@ export async function POST(request: NextRequest) {
       // Get the PDF as a buffer
       pdfBuffer = Buffer.from(pdfResponse.data);
       console.log("PDF buffer created, size:", pdfBuffer.length, "bytes");
+      
+      // If userId is provided, save to Supabase Storage
+      if (userId) {
+        try {
+          // Save PDF to storage
+          fileUrl = await savePdfToStorage(pdfBuffer, filename, userId);
+          
+          // Save document record to database
+          documentId = await saveDocumentToDatabase(userId, filename, fileUrl, documentType);
+        } catch (storageError) {
+          console.error("Storage/database error:", storageError);
+          // Continue without storage - the user will still get the PDF
+        }
+      }
       
     } catch (pdfError) {
       console.error('Error calling PDFShift API:', pdfError);
@@ -205,6 +336,7 @@ export async function POST(request: NextRequest) {
               <h2>Your Document is Ready</h2>
               <p>Thank you for using our service. Your document is attached to this email.</p>
               <p>If you have any questions, please contact our support team.</p>
+              ${fileUrl ? `<p>You can also access your document online at <a href="${fileUrl}">${fileUrl}</a></p>` : ''}
             `,
             attachment: [
               {
@@ -231,6 +363,7 @@ export async function POST(request: NextRequest) {
                 <h2>Your Document is Ready</h2>
                 <p>Thank you for using our service. Your document is ready and can be downloaded from our website.</p>
                 <p>If you have any questions, please contact our support team.</p>
+                ${fileUrl ? `<p>You can access your document online at <a href="${fileUrl}">${fileUrl}</a></p>` : ''}
               `
             });
             
@@ -257,6 +390,8 @@ export async function POST(request: NextRequest) {
                 <p>A new ${documentType === 'nnn-agreement' ? 'NNN Agreement' : 'document'} was generated for ${userEmail}.</p>
                 <h3>Customer Information:</h3>
                 <pre>${JSON.stringify(data, null, 2)}</pre>
+                ${fileUrl ? `<p>Document URL: <a href="${fileUrl}">${fileUrl}</a></p>` : ''}
+                ${documentId ? `<p>Document ID: ${documentId}</p>` : ''}
               `,
               attachment: [
                 {
@@ -306,6 +441,8 @@ export async function POST(request: NextRequest) {
       success: true,
       filename,
       pdfData: base64Pdf,
+      fileUrl,
+      documentId,
       emailSent
     });
     

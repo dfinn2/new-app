@@ -1,14 +1,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createClient } from "@/utils/supabase/client";
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { NNNAgreementFormData } from '@/schemas/nnnAgreementSchema';
+import { 
+  FileText, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  Download, 
+  Mail, 
+  RefreshCw,
+  ArrowRight,
+  Loader
+} from 'lucide-react';
 
 interface OrderDetails {
-  confirmed: boolean;
-  sessionId: string | null;
   status: string;
   customer?: {
     name: string;
@@ -29,21 +39,161 @@ interface OrderDetails {
 export default function SuccessPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verifyingOrder, setVerifyingOrder] = useState(true);
   
-  // Add state for PDF generation
+  // Document generation states
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [documentStatusMessage, setDocumentStatusMessage] = useState('');
+  const [uploadingToStorage, setUploadingToStorage] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  
+  // Function to upload PDF to Supabase Storage
+  const uploadPdfToStorage = async (pdfBase64: string, filename: string, userId: string | undefined) => {
+    try {
+      setUploadingToStorage(true);
+      console.log("Uploading PDF to Supabase Storage");
+      
+      if (!pdfBase64 || !filename) {
+        throw new Error("Missing PDF data or filename for upload");
+      }
+      
+      if (!userId) {
+        throw new Error("Missing user ID for document storage");
+      }
+      
+      // Initialize Supabase client
+      const supabase = createClient();
+      
+      // Verify user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user || session.user.id !== userId) {
+        throw new Error("User authentication failed or user ID mismatch");
+      }
+      
+      // Convert base64 to Blob
+      const byteCharacters = atob(pdfBase64);
+      const byteArrays = [];
+      
+      for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+      
+      const blob = new Blob(byteArrays, { type: 'application/pdf' });
+      
+      // Create a file object from the blob
+      const file = new File([blob], filename, { type: 'application/pdf' });
+      
+      // Define the storage path based on user ID
+      const filePath = `${userId}/${filename}`;
+      
+      // Upload file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log("PDF uploaded successfully:", data);
+      
+      // Get the public URL of the uploaded file
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+      
+      console.log("File URL:", urlData.publicUrl);
+      
+      setFileUrl(urlData.publicUrl);
+      setUploadSuccess(true);
+      setDocumentStatusMessage(`Your document has been generated and stored in your account.`);
+      
+      // Save document record to the database - includes purchase information
+      // This would normally happen in a server action or API route
+      // Here we're making a direct API call
+      await saveDocumentRecord(userId, filename, urlData.publicUrl, sessionId);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading PDF to storage:', error);
+      throw error;
+    } finally {
+      setUploadingToStorage(false);
+    }
+  };
+  
+  // Save document record to database
+  const saveDocumentRecord = async (
+    userId: string, 
+    filename: string, 
+    fileUrl: string, 
+    sessionId: string | null
+  ) => {
+    try {
+      console.log("Saving document record to database");
+      
+      // Prepare document record data
+      const documentData = {
+        userId,
+        filename,
+        fileUrl,
+        sessionId,
+        documentType: 'nnn-agreement',
+        status: 'completed',
+        createdAt: new Date().toISOString()
+      };
+      
+      // Call API to save document record
+      const response = await fetch('/api/save-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(documentData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to save document record: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("Document record saved:", result);
+      
+      return result;
+    } catch (error) {
+      console.error('Error saving document record:', error);
+    }
+  };
   
   // Function to generate PDF after payment
   const generatePdfAfterPayment = async (formData: NNNAgreementFormData, email: string | undefined) => {
     try {
       setGeneratingPdf(true);
       console.log("Generating PDF with form data");
+      
+      // Get current user ID from Supabase
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
       
       // Call your generate-pdf API
       const response = await fetch('/api/generate-pdf', {
@@ -55,6 +205,7 @@ export default function SuccessPage() {
           documentType: 'nnn-agreement',
           data: formData,
           userEmail: email || formData.email || '',
+          userId: userId, // Include the user ID
         }),
       });
       
@@ -84,6 +235,21 @@ export default function SuccessPage() {
         setPdfData(result.pdfData);
         setPdfFilename(result.filename || 'nnn-agreement.pdf');
         setEmailSent(result.emailSent || false);
+        
+        // If we have a document ID, you could do something with it like redirect to document view
+        if (result.documentId) {
+          console.log("Document saved with ID:", result.documentId);
+        }
+        
+        // Upload PDF to Storage if we have a user ID
+        if (userId && result.pdfData) {
+          try {
+            await uploadPdfToStorage(result.pdfData, result.filename, userId);
+          } catch (uploadError) {
+            console.error("Error uploading to storage:", uploadError);
+            // Continue anyway - the user still has the PDF
+          }
+        }
       } else {
         throw new Error(result.message || 'Failed to generate document');
       }
@@ -133,12 +299,13 @@ export default function SuccessPage() {
     }
   };
   
+  // Verify the Stripe session and get order details
   useEffect(() => {
     const getOrderDetails = async () => {
       if (!sessionId) return;
       
       try {
-        setLoading(true);
+        setVerifyingOrder(true);
         console.log("Fetching order details for session:", sessionId);
         
         // Call your verification API endpoint
@@ -153,6 +320,34 @@ export default function SuccessPage() {
         console.log("Order details received:", data);
         setOrderDetails(data);
         
+      } catch (error) {
+        console.error('Error fetching session details:', error);
+        setPdfError("Could not verify your payment. Please contact support with your session ID.");
+      } finally {
+        setVerifyingOrder(false);
+      }
+    };
+    
+    getOrderDetails();
+  }, [sessionId]);
+  
+  // Generate PDF after order details are verified
+  useEffect(() => {
+    if (orderDetails && !generatingPdf && !pdfData && !pdfError) {
+      const generateDocument = async () => {
+        setLoading(true);
+        
+        // First, verify that the user is authenticated with Supabase
+        const supabase = createClient();
+        const { data: { session }, error: authError } = await supabase.auth.getSession();
+        
+        if (authError || !session) {
+          console.error("Authentication error:", authError || "No active session");
+          setPdfError("Authentication error. Please log in and try again.");
+          setLoading(false);
+          return;
+        }
+        
         // Check if we have stored form data for PDF generation
         const storedFormData = localStorage.getItem('nnnAgreementFormData');
         console.log("Form data found in localStorage:", !!storedFormData);
@@ -162,7 +357,7 @@ export default function SuccessPage() {
             const formData = JSON.parse(storedFormData);
             
             // Generate PDF using the form data and customer email
-            await generatePdfAfterPayment(formData, data.customer?.email);
+            await generatePdfAfterPayment(formData, orderDetails.customer?.email);
             
             // Don't remove the form data yet - keep it for potential retries
             // localStorage.removeItem('nnnAgreementFormData');
@@ -173,144 +368,174 @@ export default function SuccessPage() {
         } else {
           setPdfError("No form data found. Please contact support.");
         }
-      } catch (error) {
-        console.error('Error fetching session details:', error);
-        setPdfError("Could not verify your payment. Please contact support with your session ID.");
-      } finally {
+        
         setLoading(false);
-      }
-    };
-    
-    getOrderDetails();
-  }, [sessionId]);
+      };
+      
+      generateDocument();
+    }
+  }, [orderDetails, generatingPdf, pdfData, pdfError]);
   
-  if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading order details...</p>
+  const isLoading = loading || verifyingOrder;
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {verifyingOrder ? "Verifying your payment..." : "Loading order details..."}
+          </p>
+        </div>
       </div>
-    </div>;
+    );
   }
   
   return (
-    <div className="max-w-2xl mx-auto py-16 px-4">
-      <div className="text-center">
+    <div className="max-w-3xl mx-auto py-16 px-4">
+      <div className="text-center mb-12">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-6">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+          <CheckCircle className="w-8 h-8 text-green-600" />
         </div>
         
         <h1 className="text-3xl font-bold mb-4">Thank you for your purchase!</h1>
-        <p className="text-gray-600 mb-8">
-          Your order has been confirmed and you will receive a confirmation email shortly.
+        <p className="text-gray-600 mb-8 max-w-lg mx-auto">
+          {orderDetails?.status === 'paid' 
+            ? "Your payment has been confirmed and we're preparing your document." 
+            : "Your order has been received and will be processed once payment is confirmed."}
         </p>
-        
-        {sessionId && (
-          <div className="bg-gray-50 p-4 rounded mb-8 text-left">
-            <p className="text-sm text-gray-500 mb-1">Order Reference:</p>
-            <p className="font-mono text-sm">{sessionId}</p>
-            <p className="text-sm text-gray-500 mt-4 mb-1">
-              {orderDetails && `Order Status: ${orderDetails.status === 'paid' ? 'Paid' : 'Processing'}`}
-            </p>
-          </div>
-        )}
-        
-        {/* PDF Generation Status */}
-        {generatingPdf && (
-          <div className="mt-8 p-4 bg-blue-50 rounded text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p>Generating your document...</p>
-          </div>
-        )}
-
-        {pdfError && (
-          <div className="mt-8 p-4 bg-red-50 rounded text-center">
-            <p className="text-red-600">{pdfError}</p>
-            <button 
-              onClick={handleRetryGeneration} 
-              className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Retry Generation
-            </button>
-            <p className="text-sm mt-2">
-              If the problem persists, please contact support.
-            </p>
-          </div>
-        )}
-
-        {pdfData && !pdfError && (
-          <div className="mt-8 p-6 bg-green-50 rounded text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor" 
-                className="w-8 h-8 text-green-600"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        <div className="lg:col-span-2">
+          {/* PDF Generation Status */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center">
+              <FileText className="mr-2 h-5 w-5 text-blue-500" />
+              Document Status
+            </h2>
             
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Your Document is Ready!</h3>
-            
-            {emailSent && (
-              <p className="mb-4 text-gray-600">
-                We have also sent a copy to your email for safekeeping.
-              </p>
+            {generatingPdf && (
+              <div className="text-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">Generating your document...</p>
+                <p className="text-gray-500 text-sm mt-2">This typically takes 15-30 seconds</p>
+              </div>
             )}
             
-            <button
-              onClick={handleDownloadPDF}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-flex items-center"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor" 
-                className="w-5 h-5 mr-2"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download Document
-            </button>
+            {uploadingToStorage && !generatingPdf && (
+              <div className="text-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">Saving document to your account...</p>
+                <p className="text-gray-500 text-sm mt-2">This should only take a moment</p>
+              </div>
+            )}
+
+            {pdfError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <XCircle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+                <h3 className="text-lg font-medium text-red-800 mb-2">Document Generation Failed</h3>
+                <p className="text-red-600 mb-4">{pdfError}</p>
+                <Button 
+                  onClick={handleRetryGeneration} 
+                  variant="outline"
+                  className="inline-flex items-center"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry Generation
+                </Button>
+                <p className="text-sm mt-3 text-gray-500">
+                  If the problem persists, please contact our support team.
+                </p>
+              </div>
+            )}
+
+            {pdfData && !pdfError && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
+                <h3 className="text-lg font-medium text-green-800 mb-2">Your Document is Ready!</h3>
+                <p className="text-green-600 mb-4">{documentStatusMessage || "Your document has been successfully generated."}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+                  <Button
+                    onClick={handleDownloadPDF}
+                    className="inline-flex items-center justify-center"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Document
+                  </Button>
+                  
+                  {fileUrl && (
+                    <Button
+                      variant="outline"
+                      className="inline-flex items-center justify-center"
+                      asChild
+                    >
+                      <Link href={fileUrl} target="_blank">
+                        <FileText className="mr-2 h-4 w-4" />
+                        View Online
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+                
+                {emailSent && (
+                  <div className="flex items-center justify-center text-sm text-gray-500 mt-4">
+                    <Mail className="h-4 w-4 mr-1" />
+                    <span>Document sent to {orderDetails?.customer?.email}</span>
+                  </div>
+                )}
+                
+                {uploadSuccess && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded text-sm text-blue-600">
+                    This document has been saved to your account and will be available in your Documents dashboard.
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!generatingPdf && !pdfData && !pdfError && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                <Clock className="h-10 w-10 text-yellow-500 mx-auto mb-2" />
+                <h3 className="text-lg font-medium text-yellow-800 mb-2">Document Pending</h3>
+                <p className="text-yellow-600 mb-4">
+                  We're waiting for your payment to be processed before generating your document.
+                </p>
+                <Button
+                  variant="outline"
+                  className="inline-flex items-center"
+                  onClick={() => window.location.reload()}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Check Status
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
         
-        {sessionId && orderDetails && (
-          <div className="bg-white p-6 rounded-lg shadow-lg mb-8 text-left">
+        {/* Order Summary */}
+        <div>
+          <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold mb-4">Order Summary</h2>
             
-            <div className="space-y-4">
-              {/* Payment Status */}
-              <div className="flex justify-between border-b pb-2">
+            <div className="space-y-3">
+              {/* Order Status */}
+              <div className="flex justify-between pb-2 border-b border-gray-100">
                 <span className="text-gray-600">Status:</span>
                 <span className={`font-medium ${
-                  orderDetails.status === 'paid' ? 'text-green-600' : 'text-amber-600'
+                  orderDetails?.status === 'paid' ? 'text-green-600' : 'text-amber-600'
                 }`}>
-                  {orderDetails.status === 'paid' ? 'Paid' : 'Processing'}
+                  {orderDetails?.status === 'paid' ? 'Paid' : 'Processing'}
                 </span>
               </div>
               
-              {/* Customer Info */}
-              {orderDetails.customer && (
-                <div className="border-b pb-2">
-                  <p className="text-sm text-gray-500 mb-1">Customer:</p>
-                  <p className="font-medium">{orderDetails.customer.name || 'Not provided'}</p>
-                  <p className="text-gray-600">{orderDetails.customer.email || 'Not provided'}</p>
-                </div>
-              )}
-              
               {/* Order Items */}
-              {orderDetails.items && orderDetails.items.length > 0 && (
-                <div className="border-b pb-2">
-                  <p className="text-sm text-gray-500 mb-2">Items:</p>
+              {orderDetails?.items && orderDetails.items.length > 0 && (
+                <div className="pt-2 pb-3 border-b border-gray-100">
                   {orderDetails.items.map((item, i) => (
                     <div key={i} className="flex justify-between py-1">
-                      <span>{item.name} {item.quantity > 1 && `(${item.quantity})`}</span>
+                      <span className="text-gray-600">{item.name}</span>
                       <span className="font-medium">${item.amount.toFixed(2)}</span>
                     </div>
                   ))}
@@ -320,33 +545,63 @@ export default function SuccessPage() {
               {/* Total */}
               <div className="flex justify-between pt-2 font-bold">
                 <span>Total:</span>
-                <span>${orderDetails.payment?.amount?.toFixed(2) || '0.00'}</span>
+                <span>${orderDetails?.payment?.amount?.toFixed(2) || '0.00'}</span>
               </div>
               
-              {/* Receipt ID */}
-              <div className="mt-4 pt-4 border-t text-sm">
-                <p className="text-gray-500">Receipt ID:</p>
-                <p className="font-mono break-all">{orderDetails.receiptId || sessionId}</p>
-                <p className="text-gray-500 mt-2">Date:</p>
-                <p>{orderDetails.payment?.created ? new Date(orderDetails.payment.created).toLocaleString() : 'Not available'}</p>
+              {/* Order Details */}
+              <div className="mt-6 pt-4 border-t border-gray-100 text-sm">
+                <p className="text-gray-500 mb-1">Order ID:</p>
+                <p className="font-mono break-all text-xs mb-3">{sessionId}</p>
+                
+                <p className="text-gray-500 mb-1">Date:</p>
+                <p className="mb-3">{orderDetails?.payment?.created ? new Date(orderDetails.payment.created).toLocaleString() : 'Not available'}</p>
+                
+                {orderDetails?.customer?.email && (
+                  <>
+                    <p className="text-gray-500 mb-1">Email:</p>
+                    <p>{orderDetails.customer.email}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
-        )}
-        
-        <div className="space-y-4">
-          <Button asChild className="w-full">
-            <Link href="/">
-              Return to Home
-            </Link>
-          </Button>
           
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/product">
-              Browse More Products
-            </Link>
-          </Button>
+          {/* Next Steps */}
+          <div className="bg-blue-50 rounded-lg shadow-md p-6 mt-6">
+            <h3 className="font-bold text-blue-800 mb-3">What's Next?</h3>
+            <ul className="space-y-2 text-sm text-blue-700">
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 mr-2 mt-0.5 text-blue-500" />
+                <span>Your document has been securely saved in your account</span>
+              </li>
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 mr-2 mt-0.5 text-blue-500" />
+                <span>Access your document anytime from your dashboard</span>
+              </li>
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 mr-2 mt-0.5 text-blue-500" />
+                <span>Need changes? Our support team is here to help</span>
+              </li>
+            </ul>
+          </div>
         </div>
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
+        <Button asChild className="inline-flex items-center justify-center">
+          <Link href="/dashboard/documents">
+            <FileText className="mr-2 h-4 w-4" />
+            Go to My Documents
+          </Link>
+        </Button>
+        
+        <Button asChild variant="outline" className="inline-flex items-center justify-center">
+          <Link href="/product">
+            <ArrowRight className="mr-2 h-4 w-4" />
+            Browse More Products
+          </Link>
+        </Button>
       </div>
     </div>
   );

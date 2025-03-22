@@ -1,13 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { login, signup, signInWithGoogle } from './actions'
 import { User, Lock, Mail, UserPlus, Github } from 'lucide-react'
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true)
+  const searchParams = useSearchParams()
+  const showSignup = searchParams.get('signup') === 'true'
+  const [isLogin, setIsLogin] = useState(!showSignup)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // Set form mode based on URL parameter when component mounts
+  useEffect(() => {
+    setIsLogin(!showSignup)
+  }, [showSignup])
 
   const handleLogin = async (formData: FormData) => {
     const result = await login(formData)

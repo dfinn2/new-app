@@ -1,7 +1,5 @@
 import ProductCard from "@/components/ProductCard";
-import { client } from "@/sanity/lib/client";
-import { ProductTypeCard } from "@/components/ProductCard";
-import { SanityProduct } from "@/types/sanity";
+import { getProducts } from "@/lib/db/documents";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
-import { PRODUCT_QUERY } from "@/sanity/lib/queries";
+
 
 export default async function Home({
   searchParams,
@@ -23,11 +21,8 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const query = params.query || null;
-  const posts = await client.fetch(PRODUCT_QUERY, { search: query });
-
-  // For debugging purposes
-  console.log("Posts from Sanity:", JSON.stringify(posts, null, 2));
-
+  const products = await getProducts(query);
+    
   return (
     <>
       {/* New NNN Agreement CTA Section */}
@@ -84,7 +79,7 @@ export default async function Home({
               {/* Image container */}
               <div className="relative w-11/12 aspect-square">
                 <Image
-                  src="/hero.png"
+                  src="/testimage.png"
                   alt="NNN Agreement Protection"
                   fill
                   priority
@@ -284,27 +279,6 @@ export default async function Home({
         </div>
       </section>
 
-      {/* Extra bits 
-      <div className="transform translate-y-1/2 -rotate-3 bg-highlight-200 px-6 py-2 rounded-sm shadow-md max-w-1/2 z-20">
-              <p className="font-bold text-sm">Read more</p>
-              <Image
-                src="/handrawnarrow.png"
-                alt="arrow"
-                width={60}
-                height={60}
-              />
-            </div>
-            <div className="inline-flex px-4 py-2 mb-4 bg-blue-50 text-gray-700 rounded-md text-sm font-medium border border-gray-400 relative">
-              Most Popular
-              <span className="absolute -top-1 -left-1 h-3 w-3 rounded-full bg-blue-500 animate-pulse">
-                <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-75"></span>
-              </span>
-            </div>
-            <div className="bg-black text-white text-30-extrabold ml-4 mr-4 mt-2 mb-2">
-              <span className=""> OTHER SERVICES </span>
-            </div>
-            */}
-
       {/* How It Works Section */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -422,23 +396,14 @@ export default async function Home({
           </p>
 
           <div className="mt-7 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts && posts.length > 0 ? (
-              posts.map((post: SanityProduct) => {
-                if (!post || typeof post !== "object") {
+            {products && products.length > 0 ? (
+              products.map((product) => {
+                if (!product || typeof product !== "object") {
                   return null;
                 }
-
-                // Create a properly formatted product object
-                const productPost: ProductTypeCard = {
-                  name: post.name || "Unnamed Product",
-                  category: post.category || "Uncategorized",
-                  description: post.description || "No description available",
-                  _id: post._id || "",
-                  slug: post.slug?.current || "",
-                  basePrice: post.basePrice || post.price || 0,
-                };
-
-                return <ProductCard key={post._id} post={productPost} />;
+                
+                // Now directly pass the product without transformation
+                return <ProductCard key={product.id} product={product} />;
               })
             ) : (
               <div className="col-span-full text-center py-10">

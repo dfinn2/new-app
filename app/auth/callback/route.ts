@@ -1,29 +1,28 @@
+// app/auth/callback/route.ts
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
-
+  const next = searchParams.get('next') ?? '/onboarding' // Default to onboarding
+  
   if (code) {
     const supabase = await createClient()
 
     // Exchange the auth code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
     if (!error) {
-      // Check if we're behind a load balancer (for production environments)
+      // User is authenticated - redirect to onboarding which will handle profile creation
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
       if (isLocalEnv) {
-        // Local development - no load balancer
         return NextResponse.redirect(`${new URL(request.url).origin}${next}`)
       } else if (forwardedHost) {
-        // Production with load balancer
         return NextResponse.redirect(`https://${forwardedHost}${next}`)
       } else {
-        // Fallback
         return NextResponse.redirect(`${new URL(request.url).origin}${next}`)
       }
     }

@@ -1,8 +1,6 @@
-// app/(dashboard)/dashboard/page.tsx
-import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { formatDate } from "@/lib/utils";
+
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -19,26 +17,29 @@ export default async function Dashboard() {
   
   // Fetch user profile data
   const { data: userProfile } = await supabase
-    .from('user_profile')
-    .select('id, display_name, email, created_at')
+    .from('user_profiles')
+    .select('id, email')
     .eq('id', userId)
     .single();
   
   // Fetch user purchases with document details
   const { data: purchases } = await supabase
-    .from('user_purchases')
+    .from('document_purchases')
     .select(`
-      id, 
-      purchase_date,
-      total_amount,
+      id,
+      user_id,
+      stripe_payment_id,
       payment_status,
-      documents:documents(
-        id, 
-        title, 
-        description, 
-        file_path,
-        price
-      )
+      generations_used,
+      product_name,
+      stripe_session_id,
+      created_at,
+      updated_at,
+      documents:document_templates (
+        name,
+        base_price,
+        description,
+        file_path,)
     `)
     .eq('user_id', userId);
   
@@ -62,11 +63,11 @@ export default async function Dashboard() {
           <div className="grid gap-4">
             {purchases.map((purchase) => (
               <div key={purchase.id} className="border rounded p-4">
-                <h3 className="font-medium">{purchase.documents?.title || "Untitled Document"}</h3>
+                <h3 className="font-medium">{purchase.product_name?.title || "Untitled Document"}</h3>
                 <p className="text-gray-600 text-sm mb-2">{purchase.documents?.description || "No description"}</p>
                 <div className="flex justify-between items-center mt-2">
                   <p className="text-sm text-gray-500">
-                    Purchased on: {purchase.purchase_date ? new Date(purchase.purchase_date).toLocaleDateString() : 'Unknown'} |  
+                    Purchased on: {purchase.created_at ? new Date(purchase.created_at).toLocaleDateString() : 'Unknown'} |  
                     Price: ${((purchase.documents?.price || 0) / 100).toFixed(2)}
                   </p>
                   {purchase.documents?.file_path && (
@@ -84,7 +85,7 @@ export default async function Dashboard() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">You haven&nbsp;t purchased any documents yet.</p>
+          <p className="text-gray-500">You haven&apos;t purchased any documents yet.</p>
         )}
       </div>
     </div>

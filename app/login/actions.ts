@@ -1,3 +1,4 @@
+// app/login/actions.ts
 'use server'
 
 import { revalidatePath } from 'next/cache'
@@ -15,11 +16,10 @@ export async function signup(formData: FormData) {
 
   // Validate inputs
   if (!email || !password || !name) {
-    // In a real app, you'd want to return an error to display to the user
     return { error: 'Please provide all required fields' }
   }
 
-  // Sign up the user with Supabase Auth
+  // Sign up the user with Supabase Auth - JUST AUTHENTICATION
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -35,29 +35,15 @@ export async function signup(formData: FormData) {
     return { error: authError.message }
   }
 
-  // If auth was successful, create a user profile record
-  if (authData?.user) {
-    const { error: profileError } = await supabase
-      .from('user_profile')
-      .insert({
-        id: authData.user.id,
-        display_name: name,
-        email: email,
-        created_at: new Date().toISOString()
-      })
-
-    if (profileError) {
-      console.error('Profile creation error:', profileError)
-      // Consider whether to revert the auth signup if profile creation fails
-      return { error: 'Account created but profile setup failed. Please contact support.' }
-    }
-  }
-
+  // No profile creation here - just redirect to onboarding
   revalidatePath('/', 'layout')
-  redirect('/dashboard') // Send them directly to dashboard after signup
+  
+  // Redirect to onboarding instead of dashboard
+  redirect('/onboarding')
 }
 
 export async function login(formData: FormData) {
+  // Keep original login code
   const supabase = await createClient()
 
   const data = {
@@ -76,6 +62,7 @@ export async function login(formData: FormData) {
 }
 
 export async function signInWithGoogle() {
+  // Keep original Google auth code
   const supabase = await createClient()
   const cookieStore = cookies()
   const origin = cookieStore.get('next-url')?.value || 'http://localhost:3000'
@@ -100,29 +87,3 @@ export async function signInWithGoogle() {
     redirect(data.url)
   }
 }
-
-// Placeholder for Facebook OAuth integration
-/*
-export async function signInWithFacebook() {
-  const supabase = await createClient()
-  const cookieStore = cookies()
-  const origin = cookieStore.get('next-url')?.value || 'http://localhost:3000'
-  
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'facebook',
-    options: {
-      redirectTo: `${origin}/auth/callback`,
-      scopes: 'email,public_profile',
-    },
-  })
-  
-  if (error) {
-    console.error('OAuth error:', error)
-    return { error: error.message }
-  }
-  
-  if (data?.url) {
-    redirect(data.url)
-  }
-}
-*/
