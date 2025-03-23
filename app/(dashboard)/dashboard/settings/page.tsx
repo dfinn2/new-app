@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Mail, Shield, CreditCard, Clock, Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
+import { Bell, Mail, Shield, CreditCard, Clock, Eye, Check, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { createClient } from '@/utils/supabase/client';
@@ -293,6 +293,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => handleToggle('email', 'purchases')}
+                  title="Toggle Purchase Confirmations"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full ${
                     emailNotifications.purchases ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
@@ -312,6 +313,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => handleToggle('email', 'documents')}
+                  title="Toggle Document Updates"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full ${
                     emailNotifications.documents ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
@@ -331,6 +333,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => handleToggle('email', 'marketing')}
+                  title="Toggle Marketing Communications"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full ${
                     emailNotifications.marketing ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
@@ -368,6 +371,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => handleToggle('security', 'twoFactorAuth')}
+                  title="Toggle Two-Factor Authentication"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full ${
                     securitySettings.twoFactorAuth ? 'bg-blue-600' : 'bg-gray-200'
                   }`}
@@ -464,7 +468,7 @@ export default function SettingsPage() {
               <h3 className="font-medium">Browser Notifications</h3>
               <p className="text-sm text-gray-500">Receive notifications in your browser</p>
             </div>
-            <button className="text-blue-600 text-sm" disabled>
+            <button className="text-blue-600 text-sm" title="notification enable" disabled>
               Enable
             </button>
           </div>
@@ -474,7 +478,7 @@ export default function SettingsPage() {
               <h3 className="font-medium">SMS Notifications</h3>
               <p className="text-sm text-gray-500">Receive important updates via text message</p>
             </div>
-            <button className="text-blue-600 text-sm" disabled>
+            <button className="text-blue-600 text-sm" title="toggle important notifications" disabled>
               Set up
             </button>
           </div>

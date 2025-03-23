@@ -95,6 +95,7 @@ export default function ProductClient({
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">{product.name}</h2>
                 <p className="category-tag">{product.category || 'Standard'}</p>
+                <p className="">{product.basePrice || "nothing"}</p>
               </div>
                           
               <p className="text-gray-600">{product.description}</p>
