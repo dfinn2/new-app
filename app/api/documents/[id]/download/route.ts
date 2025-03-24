@@ -27,7 +27,7 @@ export async function GET(
         document_purchases!inner(
           user_id,
           template_id,
-          document_templates!inner(name)
+          product_db!inner(name)
         )
       `)
       .eq('id', generationId)
@@ -53,7 +53,7 @@ export async function GET(
     }
     
     // Generate filename
-    const templateName = generation.document_purchases.document_templates.name.replace(/\s+/g, '_');
+    const templateName = generation.document_purchases.product_db.name.replace(/\s+/g, '_');
     const filename = `${templateName}_${new Date().toISOString().split('T')[0]}.pdf`;
     
     // Return the file

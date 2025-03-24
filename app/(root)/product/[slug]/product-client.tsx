@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { getFormComponent } from '@/components/product-forms/registry';
 import { getPreviewComponent } from '@/components/product-previews/registry';
-import BuyNowButton from '@/components/BuyNowButton';
+import ProductInfoPage from '@/components/ProductInfoPage';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 
 // Define the product interface
 interface Product {
   id: string;
   name: string;
   description: string;
-  base_price: number;
-  stripe_price_id?: string;
-  stripe_product_id?: string;
+  basePrice: number;
+  stripePriceId?: string;
+  stripeProductId?: string;
   slug: string;
   content?: string;
   category?: string;
@@ -26,14 +28,64 @@ export default function ProductClient({
   product: Product;
   slug: string;
 }) {
+  const router = useRouter();
   const [formData, setFormData] = useState<unknown>({});
   const [showForm, setShowForm] = useState(false);
   const [generatingDocument, setGeneratingDocument] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   // Get the appropriate form component and schema based on the product slug
   const { Component: FormComponent, schema } = getFormComponent(slug);
   const PreviewComponent = getPreviewComponent(slug);
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!session);
+        if (session?.user) {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const supabase = createClient();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setIsAuthenticated(!!session);
+        if (session?.user) {
+          setUser(session.user);
+        } else {
+          setUser(null);
+        }
+        
+        // If user logs out while on the form page, return to info page
+        if (event === 'SIGNED_OUT' && showForm) {
+          setShowForm(false);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [showForm]);
 
   // Handle form data changes (for real-time preview)
   const handleFormChange = useCallback((newData: unknown) => {
@@ -80,63 +132,42 @@ export default function ProductClient({
     }
   };
 
+  // Handle continue button click
+  const handleContinue = () => {
+    setShowForm(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[500px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated or not showing form, display product info page
+  if (!isAuthenticated || !showForm) {
+    return (
+      <section className="section_container py-10 pb-26">
+        <div className="max-w-4xl mx-auto">
+          <ProductInfoPage
+            product={product}
+            isAuthenticated={isAuthenticated}
+            user={user}
+            onContinue={handleContinue}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  // If authenticated and showing form, display the form and preview
   return (
     <section className="section_container py-10 pb-26">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
-        {/* Left Column - Container with animation */}
+        {/* Left Column - Form Container */}
         <div className="relative min-h-[500px] max-h-[80vh] overflow-auto">
-          {/* Information Card */}
-          <div 
-            className={`absolute inset-0 bg-white p-6 rounded-lg shadow-md transition-all duration-500 ease-in-out ${
-              showForm ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}
-          >
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{product.name}</h2>
-                <p className="category-tag">{product.category || 'Standard'}</p>
-                <p className="">{product.basePrice || "nothing"}</p>
-              </div>
-                          
-              <p className="text-gray-600">{product.description}</p>
-              
-              {product.base_price && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-semibold">Base Price</h3>
-                  <p className="text-xl font-bold text-emerald-600">${product.base_price}</p>
-                </div>
-              )}
-              
-              {/* Buy Now and Custom Quote buttons */}
-              <div className="mt-6 space-y-4">
-                <BuyNowButton
-                  productId={product.id} 
-                  productName={product.name}
-                  price={product.base_price || 0}
-                  description={product.description}
-                  stripePriceId={product.stripe_price_id}
-                  stripeProductId={product.stripe_product_id}
-                  slug={slug}
-                />
-                
-                <p className="text-center text-gray-500 text-sm">or</p>
-                
-                <button 
-                  onClick={() => setShowForm(true)}
-                  className="w-full border border-gray-300 bg-white text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50"
-                >
-                  Customize Document
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          {/* Dynamic Form Component with Zod validation */}
-          <div 
-            className={`absolute inset-0 bg-white p-6 transition-all duration-300 ease-in-out ${
-              showForm ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          >
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Customize Your {product.name}</h2>
               <button 

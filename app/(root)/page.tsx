@@ -14,6 +14,8 @@ import Image from "next/image";
 
 
 
+
+
 export default async function Home({
   searchParams,
 }: {
@@ -26,7 +28,7 @@ export default async function Home({
   return (
     <>
       {/* New NNN Agreement CTA Section */}
-      <section className="py-16 bg-gradient-to-br from-[#ffe6d2] via-[#fff3e9] to-[#fff5e7]">
+      <section className="py-16 bg-gradient-to-br from-[#ffe6d2] via-[#fff3e9] to-[#fff5e7] ">
         <div className="container mx-auto px-4 pt-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             {/* Left Column - CTA Content */}
@@ -245,7 +247,7 @@ export default async function Home({
                 />
               </div>
             </div>
-
+                       
             <div className="md:w-1/2">
               <h2 className="text-3xl font-bold mb-6">
                 Tested and Lawyer-Approved Templates
@@ -275,18 +277,20 @@ export default async function Home({
                 </p>
               </div>
             </div>
+            
           </div>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 bg-gray-50">
+      
+      <section className="py-20 bg-[#f5f5f7]">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-16">How It Works</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
             <div className="text-center">
-              <div className="h-16 w-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+              <div className="h-16 w-16 bg-gradient-radial from-[#ffe6d2] via-[#fb943a] to-[#ffb980] text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg">
                 1
               </div>
               <h3 className="text-xl font-semibold mb-3">Fill Out the Form</h3>

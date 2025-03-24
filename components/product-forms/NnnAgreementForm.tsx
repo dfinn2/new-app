@@ -1,13 +1,15 @@
-// components/product-forms/NnnAgreementForm.tsx
+// components/product-forms/NnnAgreementForm.tsx - Updated version
 import { useEffect, useState, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { nnnAgreementSchema, NNNAgreementFormData } from "@/schemas/nnnAgreementSchema";
 import { FormPage1, FormPage2, FormPage3, OrderConfirmation } from "@/components/form-pages/NnnFormPages";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 interface ProductType {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   basePrice: number;
@@ -28,10 +30,25 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
   const totalPages = 4; // Including confirmation page
   const firstRender = useRef(true);
   const router = useRouter();
+  const [user, setUser] = useState<any>(null);
   
   // Add states for form processing
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get user session/email on component mount
+  useEffect(() => {
+    const getUserData = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+      }
+    };
+    
+    getUserData();
+  }, []);
   
   const methods = useForm<NNNAgreementFormData>({
     mode: "onChange",
@@ -40,11 +57,18 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
       productTrademark: "notInterested",
       arbitration: "ICC International Court of Arbitration",
       penaltyDamages: "liquidatedDamages",
-      email: "", // Email field with empty default
+      email: "", // Email field with empty default - will be populated from user
     },
   });
   
-  const { handleSubmit, watch, formState, setError: setFormError, clearErrors, register } = methods;
+  const { handleSubmit, watch, formState, setError: setFormError, clearErrors, register, setValue } = methods;
+  
+  // Set email value from user data when available
+  useEffect(() => {
+    if (user?.email) {
+      setValue('email', user.email);
+    }
+  }, [user, setValue]);
   
   // Watch for changes to update preview
   const formValues = watch();
@@ -151,6 +175,11 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
       
       const validatedData = methods.getValues();
       
+      // Use user's email if not provided or empty in the form
+      if (!validatedData.email && user?.email) {
+        validatedData.email = user.email;
+      }
+      
       // Store form data in localStorage for retrieval after payment
       localStorage.setItem('nnnAgreementFormData', JSON.stringify(validatedData));
       
@@ -161,14 +190,15 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          productId: product._id,
+          productId: product.id,
           productName: product.name,
           price: product.basePrice * 100, // Convert to cents
           description: product.description || '',
           stripePriceId: product.stripePriceId,
           stripeProductId: product.stripeProductId,
           slug: product.slug,
-          email: validatedData.email || '',
+          email: validatedData.email || user?.email || '',
+          formData: validatedData,
         }),
       });
       
@@ -229,6 +259,44 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
     }
   };
   
+  // Create a modified OrderConfirmation component that doesn't show email field if user is logged in
+  const ModifiedOrderConfirmation = () => {
+    return (
+      <>
+        <OrderConfirmation data={formValues} />
+        
+        {/* Only show email field if user email is not available */}
+        {!user?.email && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
+            <label className="block text-sm font-medium mb-1">
+              Your Email (to receive the document)
+            </label>
+            <input
+              type="email"
+              {...register("email")}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              placeholder="email@example.com"
+            />
+            {formState.errors.email && (
+              <p className="text-red-500 text-xs mt-1">
+                {formState.errors.email.message as string}
+              </p>
+            )}
+          </div>
+        )}
+        
+        {/* If user is logged in, show which email will be used */}
+        {user?.email && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-sm text-blue-700">
+              Your document will be sent to: <strong>{user.email}</strong>
+            </p>
+          </div>
+        )}
+      </>
+    );
+  };
+  
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="h-full flex flex-col">
@@ -236,29 +304,7 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
           {currentPage === 1 && <FormPage1 />}
           {currentPage === 2 && <FormPage2 />}
           {currentPage === 3 && <FormPage3 />}
-          {currentPage === 4 && (
-            <>
-              <OrderConfirmation data={formValues} />
-              
-              {/* Add email field to confirmation page */}
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-                <label className="block text-sm font-medium mb-1">
-                  Your Email (to receive the document)
-                </label>
-                <input
-                  type="email"
-                  {...register("email")}
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                  placeholder="email@example.com"
-                />
-                {formState.errors.email && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {formState.errors.email.message as string}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+          {currentPage === 4 && <ModifiedOrderConfirmation />}
         </div>
         
         {/* Error message */}

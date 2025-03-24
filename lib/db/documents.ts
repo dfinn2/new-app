@@ -25,7 +25,7 @@ export async function getAllProducts(): Promise<Product[]> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from("document_templates")
+      .from("product_db")
       .select(
         "id, name, slug, base_price, description, file_path, form_schema, active, stripe_product_id, stripe_price_id, created_at, updated_at, empty_3"
       )
@@ -51,7 +51,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from("document_templates")
+      .from("product_db")
       .select(
         "id, name, slug, base_price, description, file_path, form_schema, active, stripe_product_id, stripe_price_id, created_at, updated_at"
       )
@@ -81,7 +81,7 @@ export async function getProducts(
     const supabase = await createClient();
 
     let query = supabase
-      .from("document_templates")
+      .from("product_db")
       .select(
         "id, name, description, base_price, stripe_product_id, stripe_price_id, active"
       );

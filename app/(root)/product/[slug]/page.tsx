@@ -1,6 +1,7 @@
+// app/(root)/product/[slug]/page.tsx
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
-import ProductClient from "./product-client";
+import UpdatedProductClient from "./product-client";
 
 // Server component to fetch product data
 export default async function ProductPage({ params }: { params: { slug: string } }) {
@@ -10,7 +11,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const supabase = await createClient();
   
   const { data: product, error } = await supabase
-    .from('document_templates')
+    .from('product_db')
     .select('*')
     .eq('slug', slug)
     .single();
@@ -33,5 +34,5 @@ export default async function ProductPage({ params }: { params: { slug: string }
     category: product.category
   };
 
-  return <ProductClient product={Product} slug={slug} />;
+  return <UpdatedProductClient product={Product} slug={slug} />;
 }

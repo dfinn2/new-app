@@ -1,122 +1,159 @@
 // app/api/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { createClient } from '@/utils/supabase/server';
 import { headers } from 'next/headers';
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
-// Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2025-02-24.acacia',
+});
+
+// Initialize Supabase client
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
 export async function POST(req: NextRequest) {
+  console.log('Webhook received');
+  
   try {
     const body = await req.text();
-    const signature = headers().get('stripe-signature') as string;
-
-    // Verify webhook signature if secret is configured
+    const headersList = await headers();
+    const signature = headersList.get('stripe-signature') as string;
+    
+    // Debug: Log what we received
+    console.log(`Request body (first 100 chars): ${body.substring(0, 100)}...`);
+    
+    // Parse the event
     let event: Stripe.Event;
-    if (webhookSecret) {
-      try {
+    
+    try {
+      // Try to use the webhook secret if available
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+      
+      if (webhookSecret && signature) {
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      } else {
+        // For testing without signature verification
+        console.log('No webhook secret or signature, parsing body directly');
+        event = JSON.parse(body);
       }
-    } else {
-      // For testing without a webhook secret
-      event = JSON.parse(body) as Stripe.Event;
-      console.warn('Webhook signature verification skipped - no webhook secret configured');
+    } catch (err: any) {
+      console.error(`⚠️ Webhook error: ${err.message}`);
+      return NextResponse.json(
+        { error: { message: err.message } },
+        { status: 400 }
+      );
     }
-
+    
     console.log(`Event received: ${event.type}`);
 
-    // Handle successful checkout session completion
+    // Handle checkout.session.completed event
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      await handleCheckoutSessionCompleted(session);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error('Error processing webhook:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
-  }
-}
-
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  // Skip if session doesn't have necessary data
-  if (!session.customer_details || session.payment_status !== 'paid') {
-    console.log('Session missing required information or not paid');
-    return;
-  }
-
-  try {
-    // Get customer email from session
-    const customerEmail = session.customer_details.email;
-    if (!customerEmail) {
-      console.log('No customer email available in the session');
-      return;
-    }
-
-    // Get Supabase client
-    const supabase = await createClient();
-    
-    // Find user by email
-    const { data: userData, error: userError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('email', customerEmail)
-      .single();
-    
-    if (userError || !userData) {
-      console.error('Error finding user:', userError);
-      return;
-    }
-    
-    const userId = userData.id;
-    
-    // Fetch line items to get product details
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-    if (!lineItems.data.length) {
-      console.log('No line items found for session:', session.id);
-      return;
-    }
-    
-    // Get the first line item (assuming one document per purchase)
-    const item = lineItems.data[0];
-    
-    // Get metadata from session
-    const metadata = session.metadata || {};
-    
-    // Insert record into document_purchases table
-    const { data: purchaseData, error: purchaseError } = await supabase
-      .from('document_purchases')
-      .insert([
-        {
-          user_id: userId,
-          purchase_date: new Date().toISOString(),
-          product_name: item.description || 'Document Purchase',
-          amount: session.amount_total || 0,
-          status: 'completed',
-          payment_status: 'paid',
-          stripe_session_id: session.id,
-          transaction_id: session.payment_intent as string,
-          document_type: metadata.documentType || 'Legal Document',
-          disclosing_party: metadata.disclosingParty || '',
-          receiving_party: metadata.receivingParty || '',
+      
+      // Debug: Log the entire metadata
+      console.log('Session metadata:', session.metadata);
+      
+      try {
+        // Extract user ID from metadata
+        if (!session.metadata?.userId) {
+          console.error('No userId found in session metadata');
+          return NextResponse.json({ received: true }, { status: 200 });
         }
-      ])
-      .select();
-    
-    if (purchaseError) {
-      console.error('Error creating purchase record:', purchaseError);
-    } else {
-      console.log('Purchase record created successfully:', purchaseData);
+
+        const userId = session.metadata.userId;
+        
+        // Debug: Log the user ID we found
+        console.log(`Using userId: ${userId}`);
+        
+        // Check if we've already processed this session (idempotency)
+        const { data: existingOrder } = await supabaseAdmin
+          .from('orders')
+          .select('id')
+          .eq('stripe_checkout_session_id', session.id)
+          .maybeSingle();
+          
+        if (existingOrder) {
+          console.log(`Order for session ${session.id} already exists (id: ${existingOrder.id})`);
+          return NextResponse.json({ received: true }, { status: 200 });
+        }
+        
+        // Create order record
+        const { data: order, error: orderError } = await supabaseAdmin
+          .from('orders')
+          .insert({
+            user_id: userId,
+            stripe_payment_intent_id: session.payment_intent as string,
+            stripe_checkout_session_id: session.id,
+            status: 'completed',
+            total_amount: session.amount_total,
+            currency: session.currency,
+            country: session.customer_details?.address?.country || 'unknown',
+            created_at: new Date().toISOString(),
+                      
+            })
+          .select()
+          .single();
+        
+        if (orderError) {
+          console.error(`Error creating order: ${JSON.stringify(orderError)}`);
+          return NextResponse.json({ received: true }, { status: 200 });
+        }
+        
+        console.log(`✅ Order created: ${order.id}`);
+        
+        
+        // Create order item 
+        // If you have templateId in metadata, use it
+        const templateId = session.metadata.productId;
+        
+        if (templateId) {
+          console.log(`Looking up product with ID: ${templateId}`);
+          
+          // Get template information if needed
+          const { data: template } = await supabaseAdmin
+            .from('product_db')
+            .select('id')
+            .eq('id', templateId)
+            .single();
+          
+          if (template) {
+            // Create the order item
+            const { error: itemError } = await supabaseAdmin
+              .from('order_items')
+              .insert({
+                order_id: order.id,
+                template_id: template.id,
+                template_price_id: null, // You may want to look this up based on the price
+                amount_paid: session.amount_total,
+                currency: session.currency,
+                generations_purchased: 3, // Default value
+                generations_remaining: 3, // Default value
+              });
+            
+            if (itemError) {
+              console.error(`Error creating order item: ${JSON.stringify(itemError)}`);
+            } else {
+              console.log(`✅ Order item created for template: ${template.id}`);
+            }
+          }
+        } else {
+          console.log('No templateId found in metadata, skipping order item creation');
+        }
+      } catch (error: any) {
+        console.error(`Error processing checkout session: ${error.message}`);
+      }
     }
-  } catch (error) {
-    console.error('Error handling checkout session completion:', error);
+
+    return NextResponse.json({ received: true }, { status: 200 });
+  } catch (error: any) {
+    console.error(`Webhook error: ${error.message}`);
+    return NextResponse.json(
+      { error: { message: error.message } },
+      { status: 400 }
+    );
   }
 }

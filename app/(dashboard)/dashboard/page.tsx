@@ -35,7 +35,7 @@ export default async function Dashboard() {
       stripe_session_id,
       created_at,
       updated_at,
-      documents:document_templates (
+      documents:product_db (
         name,
         base_price,
         description,

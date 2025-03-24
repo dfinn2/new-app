@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useUserLocation } from "@/lib/location";
 
-// This component creates a Stripe Checkout session and redirects the user
 interface BuyNowButtonProps {
   productId: string;
   productName: string;
@@ -33,6 +33,7 @@ export default function BuyNowButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { location } = useUserLocation();
 
   const handleClick = async () => {
     try {
@@ -40,7 +41,7 @@ export default function BuyNowButton({
       setError(null);
 
       // Get form data from localStorage if available
-      const formDataString = localStorage.getItem('nnnAgreementFormData');
+      const formDataString = localStorage.getItem("nnnAgreementFormData");
       const formData = formDataString ? JSON.parse(formDataString) : null;
 
       console.log("Creating checkout for:", {
@@ -65,7 +66,7 @@ export default function BuyNowButton({
           stripeProductId, // Pass the Stripe Product ID if available
           slug, // Add slug for cancel URL
           // Add email if available for receipt email
-          email: formData?.email || '',
+          email: formData?.email || "",
         }),
       });
 
@@ -78,7 +79,9 @@ export default function BuyNowButton({
       } catch (e: unknown) {
         // Use the error variable by including it in the error message
         const errorMessage = e instanceof Error ? e.message : String(e);
-        throw new Error(`Server returned invalid JSON: ${errorMessage} (Raw: ${responseText})`);
+        throw new Error(
+          `Server returned invalid JSON: ${errorMessage} (Raw: ${responseText})`
+        );
       }
 
       if (!response.ok) {
@@ -93,7 +96,9 @@ export default function BuyNowButton({
       }
     } catch (err: unknown) {
       console.error("Error creating checkout session:", err);
-      setError(err instanceof Error ? err.message : "Failed to process payment");
+      setError(
+        err instanceof Error ? err.message : "Failed to process payment"
+      );
       alert("There was an error processing your payment. Please try again.");
     } finally {
       setLoading(false);

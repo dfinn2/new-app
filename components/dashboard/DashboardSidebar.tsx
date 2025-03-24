@@ -3,13 +3,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Package, FileText, Settings, CreditCard, HelpCircle } from "lucide-react";
+import { Package, FileText, Settings, CreditCard, HelpCircle } from "lucide-react";
 
 const navigationItems = [
   { name: "Overview", href: "/dashboard", icon: Package },
-  { name: "My Profile", href: "/dashboard/profile", icon: User },
-  { name: "My Purchases", href: "/dashboard/purchases", icon: CreditCard },
   { name: "Documents", href: "/dashboard/documents", icon: FileText },
+  { name: "Purchases", href: "/dashboard/purchases", icon: CreditCard },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Help", href: "/dashboard/help", icon: HelpCircle },
 ];

@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Mail, Shield, CreditCard, Clock, Eye, Check, AlertTriangle } from 'lucide-react';
+import { Bell, Mail, Shield, CreditCard, Clock, Eye, Check, AlertTriangle, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { createClient } from '@/utils/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -16,6 +18,19 @@ export default function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error' | null, message: string | null }>({
     type: null,
     message: null
+  });
+
+  // User profile state
+  const [profile, setProfile] = useState({
+    fullName: '',
+    displayName: '',
+    email: ''
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileErrors, setProfileErrors] = useState({
+    fullName: '',
+    displayName: '',
+    email: ''
   });
 
   // User preferences
@@ -43,31 +58,46 @@ export default function SettingsPage() {
         
         setUser(currentUser);
         
+        // Initialize profile with email from auth
+        setProfile(prev => ({
+          ...prev,
+          email: currentUser.email || ''
+        }));
+        
         // Fetch user settings from user_profile or a dedicated settings table
         const { data: userProfile, error: profileError } = await supabase
           .from('user_profile')
-          .select('settings')
+          .select('settings, full_name, display_name')
           .eq('id', currentUser.id)
           .single();
         
-        if (!profileError && userProfile?.settings) {
+        if (!profileError && userProfile) {
+          // Update profile state with database values
+          setProfile(prev => ({
+            ...prev,
+            fullName: userProfile.full_name || '',
+            displayName: userProfile.display_name || ''
+          }));
+          
           // If we have settings in the profile, use them
-          const settings = userProfile.settings;
-          
-          // Apply email notification settings if they exist
-          if (settings.emailNotifications) {
-            setEmailNotifications({
-              ...emailNotifications,
-              ...settings.emailNotifications
-            });
-          }
-          
-          // Apply security settings if they exist
-          if (settings.security) {
-            setSecuritySettings({
-              ...securitySettings,
-              ...settings.security
-            });
+          if (userProfile.settings) {
+            const settings = userProfile.settings;
+            
+            // Apply email notification settings if they exist
+            if (settings.emailNotifications) {
+              setEmailNotifications({
+                ...emailNotifications,
+                ...settings.emailNotifications
+              });
+            }
+            
+            // Apply security settings if they exist
+            if (settings.security) {
+              setSecuritySettings({
+                ...securitySettings,
+                ...settings.security
+              });
+            }
           }
         }
       } catch (error) {
@@ -104,6 +134,106 @@ export default function SettingsPage() {
         ...prev,
         [name]: parseInt(value)
       }));
+    }
+  };
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setProfile(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (profileErrors[name as keyof typeof profileErrors]) {
+      setProfileErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateProfile = () => {
+    const errors = {
+      fullName: '',
+      displayName: '',
+      email: ''
+    };
+    let isValid = true;
+
+    // Email validation
+    if (!profile.email) {
+      errors.email = 'Email is required';
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(profile.email)) {
+      errors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    // Full name validation
+    if (!profile.fullName) {
+      errors.fullName = 'Full name is required';
+      isValid = false;
+    }
+
+    // Display name validation
+    if (!profile.displayName) {
+      errors.displayName = 'Display name is required';
+      isValid = false;
+    }
+
+    setProfileErrors(errors);
+    return isValid;
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    // Validate input
+    if (!validateProfile()) return;
+    
+    try {
+      setProfileLoading(true);
+      setSaveStatus({ type: null, message: null });
+      
+      // Only update email if it has changed
+      if (profile.email !== user.email) {
+        // Update email in Supabase Auth
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: profile.email
+        });
+        
+        if (emailError) throw emailError;
+      }
+      
+      // Update profile in database
+      const { error: profileError } = await supabase
+        .from('user_profile')
+        .update({
+          full_name: profile.fullName,
+          display_name: profile.displayName
+        })
+        .eq('id', user.id);
+      
+      if (profileError) throw profileError;
+      
+      setSaveStatus({
+        type: 'success',
+        message: 'Profile updated successfully'
+      });
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSaveStatus({ type: null, message: null });
+      }, 3000);
+    } catch (error: any) {
+      console.error('Error saving profile:', error);
+      setSaveStatus({
+        type: 'error',
+        message: error.message || 'Failed to update profile'
+      });
+    } finally {
+      setProfileLoading(false);
     }
   };
   
@@ -276,8 +406,91 @@ export default function SettingsPage() {
         </div>
       )}
       
-      <Accordion type="single" collapsible className="w-full mb-6">
-        <AccordionItem value="item-1" className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <Accordion type="single" collapsible className="w-full mb-6" defaultValue="profile">
+        {/* New Profile Section */}
+        <AccordionItem value="profile" className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <AccordionTrigger className="px-6 py-4 hover:no-underline">
+            <div className="flex items-center">
+              <User className="h-5 w-5 mr-2 text-blue-600" />
+              <span className="font-medium">Profile Information</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 py-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={profile.email}
+                  onChange={handleProfileChange}
+                  placeholder="your.email@example.com"
+                  className={profileErrors.email ? "border-red-500" : ""}
+                />
+                {profileErrors.email && (
+                  <p className="text-sm text-red-500">{profileErrors.email}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  This is the email address you use to sign in to your account.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  value={profile.fullName}
+                  onChange={handleProfileChange}
+                  placeholder="John Doe"
+                  className={profileErrors.fullName ? "border-red-500" : ""}
+                />
+                {profileErrors.fullName && (
+                  <p className="text-sm text-red-500">{profileErrors.fullName}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  type="text"
+                  value={profile.displayName}
+                  onChange={handleProfileChange}
+                  placeholder="JohnD"
+                  className={profileErrors.displayName ? "border-red-500" : ""}
+                />
+                {profileErrors.displayName && (
+                  <p className="text-sm text-red-500">{profileErrors.displayName}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  This is how your name will appear to other users on the platform.
+                </p>
+              </div>
+              
+              <div className="pt-4">
+                <Button 
+                  onClick={handleSaveProfile}
+                  disabled={profileLoading}
+                >
+                  {profileLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Profile'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        
+        <AccordionItem value="item-1" className="bg-white rounded-lg shadow-sm border overflow-hidden mt-4">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center">
               <Mail className="h-5 w-5 mr-2 text-blue-600" />
