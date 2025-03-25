@@ -1,9 +1,10 @@
 // components/product-forms/registry.tsx
 import { z } from 'zod';
 import { nnnAgreementSchema } from "@/schemas/nnnAgreementSchema";
+import { companyCheckupSchema } from "@/schemas/companyCheckupSchema";
 import NNNAgreementForm from "@/components/product-forms/NnnAgreementForm";
+import CompanyCheckupForm from "@/components/product-forms/CompanyCheckupForm";
 import DefaultForm from "@/components/product-forms/DefaultForm";
-
 
 // Define the registry type
 type FormRegistry = {

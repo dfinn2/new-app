@@ -1,48 +1,56 @@
-// schemas/nnnAgreementSchema.ts
+// schemas/companyCheckupSchema.ts
 import { z } from "zod";
+
+// Define the service tiers
+export const checkupTiers = ["Basic", "Premium", "Complete"] as const;
 
 // Custom USCC validation function
 const isValidUSCC = (uscc: string) => {
   // USCC (Unified Social Credit Code) is typically 18 characters
-  // This is a simplified validation - should be improved for production
+  // This is a simplified validation for the Chinese business registration number
   const usccRegex = /^[0-9A-Z]{18}$/;
   return usccRegex.test(uscc);
 };
 
+// Define the main schema
 export const companyCheckupSchema = z.object({
-  // Disclosing Party Information
-  disclosingPartyType: z.enum(["Individual", "Corporation", "Other"]),
-  disclosingPartyName: z.string().min(1, "Disclosing party name is required"),
-  disclosingPartyBusinessNumber: z.string().optional(),
-  
-  // Receiving Party Information
-  receivingPartyName: z.string().min(1, "Receiving party name is required"),
-  receivingPartyNameChinese: z.string().optional(),
-  receivingPartyAddress: z.string().min(1, "Receiving party address is required"),
-  receivingPartyUSCC: z.string().refine(isValidUSCC, {
-    message: "Please enter a valid USCC number (18 characters)",
+  // Basic information - required for all tiers
+  manufacturerName: z.string().min(1, "Manufacturer name is required"),
+  manufacturerNameChinese: z.string().optional(),
+  usccNumber: z.string().refine(isValidUSCC, {
+    message: "Please enter a valid 18-character USCC number",
   }),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  province: z.string().min(1, "Province is required"),
   
-  // Product Information
-  productName: z.string().min(1, "Product name is required"),
-  productTrademark: z.enum(["want", "have", "notInterested"]),
-  productDescription: z.string().min(10, "Product description should be at least 10 characters"),
+  // Select tier of service
+  tier: z.enum(checkupTiers),
   
-  // Agreement Terms
-  arbitration: z.enum([
-    "ICC International Court of Arbitration",
-    "Singapore International Arbitration Centre",
-    "Hong Kong International Arbitration Centre",
-    "London Court of International Arbitration",
-    "American Arbitration Association"
-  ]),
-  penaltyDamages: z.enum([
-    "liquidatedDamages",
-    "provableDamages"
-  ]),
+  // Basic company information - optional but recommended
+  yearEstablished: z.string().optional(),
+  employeeCount: z.string().optional(),
+  businessScope: z.string().optional(),
+  productsManufactured: z.string().optional(),
+  industryFocus: z.string().optional(),
   
-  // New email field (optional, but validated as email if provided)
-  email: z.string().email("Please enter a valid email address").optional(),
+  // Contact information for the report
+  contactName: z.string().optional(),
+  contactEmail: z.string().email("Please enter a valid email address"),
+  contactPhone: z.string().optional(),
+  
+  // Additional services - only for Complete tier
+  factoryInspection: z.boolean().optional(),
+  recordsCheck: z.boolean().optional(),
+  meetingWithManufacturer: z.boolean().optional(),
+  backgroundCheck: z.boolean().optional(),
+  
+  // File uploads will be handled separately during form processing
+  // These can include business license copies, photos, etc.
+  
+  // Additional notes or special requirements
+  additionalNotes: z.string().optional(),
 });
 
+// Type definition for form data
 export type CompanyCheckupFormData = z.infer<typeof companyCheckupSchema>;

@@ -1,17 +1,20 @@
 // components/product-previews/CompanyCheckupPreview.tsx
 import { useState } from "react";
-import { CompanyCheckupFormData, checkupTiers } from "@/schemas/companyCheckupSchema";
+import { CompanyCheckupFormData } from "@/schemas/companyCheckupSchema";
 import { Building, FileText, AlertCircle, CheckCircle, User, Map, Phone, Calendar, Users, Package, Factory } from "lucide-react";
 
-interface Product {
+interface ProductType {
   id: string;
   name: string;
   description?: string;
   basePrice: number;
+  stripePriceId?: string;
+  stripeProductId?: string;
+  slug: string;
 }
 
 interface CompanyCheckupPreviewProps {
-  product: Product;
+  product: ProductType;
   formData: Partial<CompanyCheckupFormData>; // Use Partial to allow incomplete form data during editing
   isGenerating?: boolean;
 }

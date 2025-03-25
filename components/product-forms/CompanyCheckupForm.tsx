@@ -1,9 +1,9 @@
-// components/product-forms/NnnAgreementForm.tsx - Updated version
+// components/product-forms/CompanyCheckupForm.tsx
 import { useEffect, useState, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { companyCheckupSchema, CompanyCheckupFormData } from "@/schemas/companyCheckupSchema";
-import { FormPage1, FormPage2, FormPage3, OrderConfirmation } from "@/components/form-pages/NnnFormPages";
+import { FormPage1, FormPage2, FormPage3, OrderConfirmation } from "@/components/form-pages/CompanyCheckupFormPages";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -35,6 +35,7 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
   // Add states for form processing
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
   // Get user session/email on component mount
   useEffect(() => {
@@ -51,22 +52,24 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
   }, []);
   
   const methods = useForm<CompanyCheckupFormData>({
+    resolver: zodResolver(companyCheckupSchema),
     mode: "onChange",
     defaultValues: {
-      disclosingPartyType: "Individual",
-      productTrademark: "notInterested",
-      arbitration: "ICC International Court of Arbitration",
-      penaltyDamages: "liquidatedDamages",
-      email: "", // Email field with empty default - will be populated from user
-    },
+      tier: "Basic",
+      contactEmail: "", // Will be populated from user data if available
+      factoryInspection: false,
+      recordsCheck: false,
+      meetingWithManufacturer: false,
+      backgroundCheck: false,
+    }
   });
   
-  const { handleSubmit, watch, formState, setError: setFormError, clearErrors, register, setValue } = methods;
+  const { handleSubmit, watch, formState, trigger, setValue } = methods;
   
   // Set email value from user data when available
   useEffect(() => {
     if (user?.email) {
-      setValue('email', user.email);
+      setValue('contactEmail', user.email);
     }
   }, [user, setValue]);
   
@@ -90,75 +93,42 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
     return () => clearTimeout(timeoutId);
   }, [formValues, onChange]);
   
-  const validateFields = async (fieldsToValidate: string[]) => {
-    // Create a partial schema with only the fields we want to validate
-    const partialSchema: Record<string, z.ZodTypeAny> = {};
-    fieldsToValidate.forEach(field => {
-      // Get the field's schema from the main schema
-      const schema = nnnAgreementSchema.shape as Record<string, z.ZodTypeAny>;
-      const fieldSchema = schema[field];
-      if (fieldSchema) {
-        partialSchema[field] = fieldSchema;
-      }
-    });
-    
-    // Create a new partial schema
-    const validationSchema = z.object(partialSchema);
-    
-    try {
-      // Only validate the specified fields
-      const dataToValidate = {} as Partial<NNNAgreementFormData>;
-      fieldsToValidate.forEach(field => {
-        const key = field as keyof NNNAgreementFormData;
-        if (key in formValues) {
-          // Use type assertion to maintain the correct type
-          (dataToValidate as any)[key] = formValues[key];
-        }
-      });
-      
-      validationSchema.parse(dataToValidate);
-      clearErrors();
-      return true;
-    
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        error.errors.forEach((err) => {
-          if (err.path.length > 0) {
-            const path = err.path.join('.');
-            setFormError(path as keyof NNNAgreementFormData, { 
-              type: 'manual', 
-              message: err.message 
-            });
-          }
-        });
-      }
-      return false;
-    }
-  };
-  
-  const handleNext = async () => {
-    let fieldsToValidate: string[] = [];
+  // Validation functions for each page
+  const validateCurrentPage = async (): Promise<boolean> => {
+    let fieldsToValidate: Array<keyof CompanyCheckupFormData> = [];
     
     // Determine which fields to validate based on current page
     if (currentPage === 1) {
-      fieldsToValidate = ["disclosingPartyType", "disclosingPartyName"];
-      if (formValues.disclosingPartyType === "Corporation") {
-        fieldsToValidate.push("disclosingPartyBusinessNumber");
-      }
+      fieldsToValidate = ['manufacturerName', 'usccNumber', 'address', 'city', 'province', 'tier'];
     } else if (currentPage === 2) {
-      fieldsToValidate = ["receivingPartyName", "receivingPartyAddress", "receivingPartyUSCC"];
+      fieldsToValidate = ['contactEmail'];
+      // Other fields on page 2 are optional
     } else if (currentPage === 3) {
-      fieldsToValidate = ["productName", "productDescription", "productTrademark", "arbitration", "penaltyDamages"];
+      // Most fields on page 3 are optional
+      if (formValues.tier === 'Complete') {
+        // For Complete tier, validate any specific requirements
+      }
     }
     
-    const isValid = await validateFields(fieldsToValidate);
+    // Trigger validation for the specified fields
+    const result = await trigger(fieldsToValidate);
+    return result;
+  };
+  
+  // Navigation handlers
+  const handleNext = async () => {
+    const isValid = await validateCurrentPage();
     if (isValid) {
       setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+      // Scroll to top
+      window.scrollTo(0, 0);
     }
   };
   
   const handlePrevious = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
+    // Scroll to top
+    window.scrollTo(0, 0);
   };
   
   // Direct payment handler - creates Stripe session and redirects
@@ -168,20 +138,27 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
       setError(null);
       
       // Validate the form data first
-      const isValid = await methods.trigger();
+      const isValid = await trigger();
       if (!isValid) {
         throw new Error("Please fix the form errors before continuing");
       }
       
       const validatedData = methods.getValues();
       
-      // Use user's email if not provided or empty in the form
-      if (!validatedData.email && user?.email) {
-        validatedData.email = user.email;
+      // Calculate price based on tier and additional services
+      let totalPrice = 
+        validatedData.tier === "Basic" ? 199 : 
+        validatedData.tier === "Premium" ? 499 : 999;
+      
+      if (validatedData.tier === "Complete") {
+        if (validatedData.factoryInspection) totalPrice += 300;
+        if (validatedData.recordsCheck) totalPrice += 200;
+        if (validatedData.meetingWithManufacturer) totalPrice += 500;
+        if (validatedData.backgroundCheck) totalPrice += 250;
       }
       
       // Store form data in localStorage for retrieval after payment
-      localStorage.setItem('nnnAgreementFormData', JSON.stringify(validatedData));
+      localStorage.setItem('companyCheckupFormData', JSON.stringify(validatedData));
       
       // Call the create-checkout-session API
       const response = await fetch("/api/create-checkout-session", {
@@ -191,13 +168,13 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
         },
         body: JSON.stringify({
           productId: product.id,
-          productName: product.name,
-          price: product.basePrice * 100, // Convert to cents
-          description: product.description || '',
+          productName: `${product.name} - ${validatedData.tier} Tier`,
+          price: totalPrice * 100, // Convert to cents
+          description: `Verify manufacturer: ${validatedData.manufacturerName}`,
           stripePriceId: product.stripePriceId,
           stripeProductId: product.stripeProductId,
           slug: product.slug,
-          email: validatedData.email || user?.email || '',
+          email: validatedData.contactEmail,
           formData: validatedData,
         }),
       });
@@ -231,11 +208,8 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
       // Reset error state
       setError(null);
       
-      // Validate the entire form data
-      const validatedData = companyCheckupSchema.parse(data);
-      
       // Call the original onSubmit (for compatibility)
-      onSubmit(validatedData);
+      onSubmit(data);
       
       // Process payment directly
       await processPayment();
@@ -247,7 +221,7 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const path = err.path.join('.');
-            setFormError(path as keyof CompanyCheckupFormData, { 
+            methods.setError(path as any, { 
               type: 'manual', 
               message: err.message 
             });
@@ -259,44 +233,6 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
     }
   };
   
-  // Create a modified OrderConfirmation component that doesn't show email field if user is logged in
-  const ModifiedOrderConfirmation = () => {
-    return (
-      <>
-        <OrderConfirmation data={formValues} />
-        
-        {/* Only show email field if user email is not available */}
-        {!user?.email && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-            <label className="block text-sm font-medium mb-1">
-              Your Email (to receive the document)
-            </label>
-            <input
-              type="email"
-              {...register("email")}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-              placeholder="email@example.com"
-            />
-            {formState.errors.email && (
-              <p className="text-red-500 text-xs mt-1">
-                {formState.errors.email.message as string}
-              </p>
-            )}
-          </div>
-        )}
-        
-        {/* If user is logged in, show which email will be used */}
-        {user?.email && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-            <p className="text-sm text-blue-700">
-              Your document will be sent to: <strong>{user.email}</strong>
-            </p>
-          </div>
-        )}
-      </>
-    );
-  };
-  
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="h-full flex flex-col">
@@ -304,7 +240,7 @@ const CompanyCheckupForm = ({ product, onChange, onSubmit }: CompanyCheckupFormP
           {currentPage === 1 && <FormPage1 />}
           {currentPage === 2 && <FormPage2 />}
           {currentPage === 3 && <FormPage3 />}
-          {currentPage === 4 && <ModifiedOrderConfirmation />}
+          {currentPage === 4 && <OrderConfirmation data={formValues} />}
         </div>
         
         {/* Error message */}
