@@ -208,16 +208,9 @@ const Navbar = async () => {
                   </Button>
                 </Link>
 
-                {/* Create Button */}
-                <Link href="/startup/create">
-                  <Button variant="ghost" type="button">
-                    Create
-                  </Button>
-                </Link>
-
                 {/* User Email/Profile Link */}
-                <Link href={`/user/${user.id}`}>
-                  <span className="text-black px-2 py-1 rounded bg-gray-100">
+                <Link href={`/dashboard`}>
+                  <span className="text-black px-2 py-1 rounded hover:bg-gray-200 bg-gray-100">
                     {getUserDisplayName(user)}
                   </span>
                 </Link>

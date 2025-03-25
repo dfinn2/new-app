@@ -15,14 +15,15 @@ try {
     mg = mailgun.client({
       username: 'api', 
       key: process.env.MAILGUN_API_KEY,
-      //url: 'https://api.eu.mailgun.net'
+      // FOR EU USE UNCOMMENT FOLLOWING LINE
+      // url: 'https://api.eu.mailgun.net'
     });
-    console.log("Mailgun client initialized successfully");
+    console.log("Mailgun client initialized");
   } else {
     console.log("MAILGUN_API_KEY environment variable not set");
   }
 } catch (error) {
-  console.error("Error initializing Mailgun client:", error);
+  console.error("Error initializing Mailgun:", error);
 }
 
 // Define global btoa function for Node.js environment

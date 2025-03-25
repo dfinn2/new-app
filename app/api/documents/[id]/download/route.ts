@@ -24,7 +24,7 @@ export async function GET(
         id,
         file_path,
         purchase_id,
-        document_purchases!inner(
+        orders!inner(
           user_id,
           template_id,
           product_db!inner(name)
@@ -38,7 +38,7 @@ export async function GET(
     }
     
     // Verify the document belongs to the user
-    if (generation.document_purchases.user_id !== userId) {
+    if (generation.orders.user_id !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     

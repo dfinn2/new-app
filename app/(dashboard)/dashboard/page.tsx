@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 
 export default async function Dashboard() {
@@ -24,7 +25,7 @@ export default async function Dashboard() {
   
   // Fetch user purchases with document details
   const { data: purchases } = await supabase
-    .from('document_purchases')
+    .from('orders')
     .select(`
       id,
       user_id,
@@ -53,6 +54,21 @@ export default async function Dashboard() {
           <p><span className="font-medium">Name:</span> {userProfile?.display_name || user.user_metadata?.name || "Not provided"}</p>
           <p><span className="font-medium">Email:</span> {userProfile?.email || user.email}</p>
           <p><span className="font-medium">Member since:</span> {userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString() : new Date(user.created_at).toLocaleDateString()}</p>
+          {/* Logout Form */}
+                          <form action={async () => {
+                            'use server'
+                            const supabase = await createClient()
+                            await supabase.auth.signOut()
+                            redirect('/')
+                          }}>
+                            <Button
+                              variant="standard"
+                              type="submit"
+                              className=" hover:bg-red-50"
+                            >
+                              Sign Out
+                            </Button>
+                          </form>
         </div>
       </div>
       

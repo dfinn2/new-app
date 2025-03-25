@@ -1,9 +1,21 @@
+# Auth Finalisation
+[ ] Change signup page to Supabase Auth - last next-auth component
+[ ] remove next-auth as dependency
+[ ] add Facebook OAuth
+[ ] check email signup Supabase
+[ ]
+
+
+
+
 ## Repurpose StartupCards
     [ ] repurpose startup cards structure for knowledgbase
     [ ]
 
 ## Implement Dashboard
-    [ ] 
+    [ ] Fix and style user profile page
+    [ ] style signout button
+    [ ] remove signout button from Navbar
 
 ## Terms and Conditions
     [ ]

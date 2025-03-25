@@ -1,7 +1,5 @@
-// For Pages Router: /pages/api/get-products.js
 // For App Router: /app/api/get-products/route.js
 
-import { product } from '@/sanity/schemaTypes/product';
 import Stripe from 'stripe';
 
 // App Router handler

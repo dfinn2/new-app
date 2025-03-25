@@ -270,7 +270,7 @@ export function OrderConfirmation({ data }: { data: NNNAgreementFormData }) {
       </div>
       
       <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm">By clicking "Proceed to Payment", you agree to our Terms of Service and Privacy Policy.</p>
+        <p className="text-sm">By clicking &apos;Proceed to Payment&apos;, you agree to our Terms of Service and Privacy Policy.</p>
       </div>
     </div>
   );

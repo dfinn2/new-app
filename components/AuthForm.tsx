@@ -1,3 +1,5 @@
+// This is the Auth form imported into ProductClient and used in Form Pages
+
 'use client';
 
 import { useState } from 'react';
@@ -50,9 +52,9 @@ const AuthForm = () => {
       
       // Refresh the page to update auth state
       router.refresh();
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Sign up error:', error);
-      setErrorMessage(error.message || 'Failed to sign up');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to sign up');
     } finally {
       setIsLoading(false);
     }
@@ -81,9 +83,9 @@ const AuthForm = () => {
       
       // Refresh the page to update auth state
       router.refresh();
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Sign in error:', error);
-      setErrorMessage(error.message || 'Failed to sign in');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to sign in');
     } finally {
       setIsLoading(false);
     }
@@ -106,9 +108,9 @@ const AuthForm = () => {
       }
       
       // The redirect will happen automatically
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Google sign in error:', error);
-      setErrorMessage(error.message || 'Failed to sign in with Google');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to sign in with Google');
       setIsLoading(false);
     }
   };

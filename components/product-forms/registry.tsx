@@ -2,9 +2,8 @@
 import { z } from 'zod';
 import { nnnAgreementSchema } from "@/schemas/nnnAgreementSchema";
 import NNNAgreementForm from "@/components/product-forms/NnnAgreementForm";
+import DefaultForm from "@/components/product-forms/DefaultForm";
 
-// Import any future form components here
-// import OEMAgreementForm from "@/components/OEMAgreementForm";
 
 // Define the registry type
 type FormRegistry = {
@@ -14,27 +13,18 @@ type FormRegistry = {
   };
 };
 
-// Add new form components to this registry
+// Add form components to this registry
 const formRegistry: FormRegistry = {
   'nnn-agreement-cn': {
     Component: NNNAgreementForm,
     schema: nnnAgreementSchema,
   },
-  // Commented placeholder for future OEM Agreement
-  /*
-  'oem-agreement': {
-    Component: OEMAgreementForm,
-    schema: oemAgreementSchema,
+  'company-checkup': {
+    Component: CompanyCheckupForm,
+    schema: companyCheckupSchema,
   },
-  */
+  // Add future form components here
 };
-
-// Fallback form component when nothing is found
-const DefaultForm = () => (
-  <div className="p-4 border border-red-300 bg-red-50 rounded">
-    <p>No form component found for this product.</p>
-  </div>
-);
 
 // Function to get the form component by slug
 export function getFormComponent(slug: string) {

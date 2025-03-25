@@ -1,5 +1,6 @@
 // components/product-previews/registry.tsx
 import NNNAgreementPreview from "@/components/product-previews/NnnAgreementPreview";
+import CompanyCheckupPreview from "./CompanyCheckupPreview";
 
 // Import any future preview components here
 // import OEMAgreementPreview from "@/components/OEMAgreementPreview";
@@ -12,10 +13,9 @@ type PreviewRegistry = {
 // Add new preview components to this registry
 const previewRegistry: PreviewRegistry = {
   'nnn-agreement-cn': NNNAgreementPreview,
-  // Commented placeholder for future OEM Agreement
-  /*
-  'oem-agreement': OEMAgreementPreview,
-  */
+  'company-check': CompanyCheckupPreview,  
+   
+  
 };
 
 // Fallback preview component when nothing is found
