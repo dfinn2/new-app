@@ -17,11 +17,22 @@ const defaultContactSchema = z.object({
 
 type DefaultFormData = z.infer<typeof defaultContactSchema>;
 
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  basePrice: number;
+  stripePriceId?: string;
+  stripeProductId?: string;
+  slug: string;
+  productId?: string; // Added since you're using this in handleFormSubmit
+}
+
 interface DefaultFormProps {
-  product: any;
-  schema: z.ZodType<any>;
-  onChange: (data: any) => void;
-  onSubmit: (data: any) => void;
+  product: Product;
+  schema: z.ZodType<unknown>;
+  onChange: (data: Partial<DefaultFormData>) => void;
+  onSubmit: (data: DefaultFormData & { productName: string; productId: string; requestType: string }) => void;
 }
 
 const DefaultForm = ({ product, schema, onChange, onSubmit }: DefaultFormProps) => {
@@ -56,7 +67,7 @@ const DefaultForm = ({ product, schema, onChange, onSubmit }: DefaultFormProps) 
     return (
       <div className="p-6 bg-green-50 border border-green-200 rounded-md text-center">
         <h3 className="text-lg font-medium text-green-800 mb-2">Thank you for your inquiry!</h3>
-        <p className="text-green-600">We've received your request for a custom {product.name} document.</p>
+        <p className="text-green-600">We&apos;ve received your request for a custom {product.name} document.</p>
         <p className="text-green-600 mt-2">Our team will contact you shortly to discuss your specific requirements.</p>
       </div>
     );
@@ -66,7 +77,7 @@ const DefaultForm = ({ product, schema, onChange, onSubmit }: DefaultFormProps) 
     <div className="space-y-6">
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
         <p className="text-blue-700">
-          We're currently building a custom form for {product.name}. In the meantime, 
+          We&apos;re currently building a custom form for {product.name}. In the meantime, 
           please use this general inquiry form to request this document with your specific requirements.
         </p>
       </div>

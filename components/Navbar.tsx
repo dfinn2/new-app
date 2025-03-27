@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from '@/utils/supabase/server';
 import { Button } from "@/components/ui/button";
-import GoogleSignInNavButton from "@/components/GoogleSignInNavButton";
 import { redirect } from "next/navigation";
 import {
   NavigationMenu,
@@ -24,7 +23,7 @@ const Navbar = async () => {
 
   return (
     <>
-      <header className="px-5 py-3 bg-transparent shadow-sm">
+      <header className="px-5 py-3 bg-white shadow-sm">
         <nav className="flex justify-between items-center">
           <Link href="/">
             <Image src="/logo.png" alt="logo" width={144} height={30} />
@@ -39,9 +38,9 @@ const Navbar = async () => {
                     <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
                       <li className="row-span-4">
                         <NavigationMenuLink asChild>
-                          <Link href="/product/nnn-agreement-cn" className="flex flex-col h-full justify-between p-6 no-underline rounded-md shadow-md bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 hover:shadow-lg transition-all">
+                          <Link href="/product/nnn-agreement-cn" className="flex flex-col h-full justify-between p-6 no-underline rounded-md shadow-md bg-gradient-to-br from-blue-200 to-indigo-50 border border-blue-100 hover:shadow-lg transition-all">
                             <div>
-                              <div className="text-sm rounded text-blue-700 bg-blue-100 inline-block px-2 py-1 mb-2">Featured</div>
+                              <div className="text-sm rounded text-black bg-yellow-100 inline-block px-2 py-1 mb-2">Featured</div>
                               <h3 className="text-lg font-medium mb-2 text-blue-950">NNN Agreement</h3>
                               <p className="text-sm text-gray-600 mb-4">
                                 Protect your intellectual property with our comprehensive non-disclosure, non-use, and non-circumvention agreement.
@@ -57,21 +56,21 @@ const Navbar = async () => {
                         </NavigationMenuLink>
                       </li>
 
-                      <Link href="/product/oem-agreement" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                      <Link href="/product/oem-agreement" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                         <div className="text-sm font-medium leading-none">OEM Agreements</div>
                         <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
                           Original Equipment Manufacturer agreements for product manufacturing.
                         </p>
                       </Link>
                       
-                      <Link href="/product/distribution-agreement" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                      <Link href="/product/distribution-agreement" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                         <div className="text-sm font-medium leading-none">Distribution Agreements</div>
                         <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
                           Structure and protect your distribution relationships with our templates.
                         </p>
                       </Link>
                       
-                      <Link href="/product/licensing-agreement" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                      <Link href="/product/licensing-agreement" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                         <div className="text-sm font-medium leading-none">Licensing Agreements</div>
                         <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
                           Secure your intellectual property with proper licensing terms.
@@ -94,7 +93,7 @@ const Navbar = async () => {
                         <div className="text-sm font-medium leading-none mb-3 text-gray-500">INTELLECTUAL PROPERTY</div>
                       </li>
                       <li>
-                        <Link href="/product/trademark-registration" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
+                        <Link href="/product/trademark-china" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                           <div>
                             <div className="mb-2 text-base font-medium">Trademark Registration</div>
                             <p className="text-sm text-gray-500">Register your trademark in China with our streamlined process.</p>
@@ -114,8 +113,8 @@ const Navbar = async () => {
                       <li>
                         <Link href="/product/copyright-registration" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                           <div>
-                            <div className="mb-2 text-base font-medium">Copyright Registration</div>
-                            <p className="text-sm text-gray-500">Secure your creative works with proper copyright protection.</p>
+                            <div className="mb-2 text-base font-medium">Company Checkup</div>
+                            <p className="text-sm text-gray-500">Get detailed intelligence and perform checks on your Chinese manufacturer.</p>
                           </div>
                           <div className="mt-4 text-xs text-blue-600">Starting at $299</div>
                         </Link>
@@ -139,7 +138,7 @@ const Navbar = async () => {
                   <NavigationMenuContent>
                     <ul className="flex flex-col w-[400px] gap-2 p-4 md:w-[500px] lg:w-[600px]">
                       <li>
-                        <Link href="/resources/guides" className="flex items-center gap-2 rounded-md p-2 hover:bg-gray-100">
+                        <Link href="/resources/guides" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-100">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                           </div>
@@ -150,7 +149,7 @@ const Navbar = async () => {
                         </Link>
                       </li>
                       <li>
-                        <Link href="/resources/templates" className="flex items-center gap-2 rounded-md p-2 hover:bg-gray-100">
+                        <Link href="/resources/templates" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-green-100">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                           </div>
@@ -161,7 +160,7 @@ const Navbar = async () => {
                         </Link>
                       </li>
                       <li>
-                        <Link href="/resources/blog" className="flex items-center gap-2 rounded-md p-2 hover:bg-gray-100">
+                        <Link href="/resources/blog" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-purple-100">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                           </div>
@@ -172,7 +171,7 @@ const Navbar = async () => {
                         </Link>
                       </li>
                       <li>
-                        <Link href="/resources/webinars" className="flex items-center gap-2 rounded-md p-2 hover:bg-gray-100">
+                        <Link href="/resources/webinars" className="flex h-full flex-col justify-between rounded-md border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-blue-500">
                           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-red-100">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
                           </div>

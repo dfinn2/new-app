@@ -2,14 +2,32 @@
 import { z } from 'zod';
 import { nnnAgreementSchema } from "@/schemas/nnnAgreementSchema";
 import { companyCheckupSchema } from "@/schemas/companyCheckupSchema";
+import { trademarkChinaSchema } from "@/schemas/trademarkChinaSchema";
 import NNNAgreementForm from "@/components/product-forms/NnnAgreementForm";
 import CompanyCheckupForm from "@/components/product-forms/CompanyCheckupForm";
+import TrademarkChinaForm from "@/components/product-forms/TrademarkChinaForm";
 import DefaultForm from "@/components/product-forms/DefaultForm";
 
-// Define the registry type
+// Define a common interface for all form components
+interface FormComponentProps<T> {
+  product: {
+    id: string;
+    name: string;
+    description?: string;
+    basePrice: number;
+    stripePriceId?: string;
+    stripeProductId?: string;
+    slug: string;
+  };
+  schema: z.ZodType<T>;
+  onChange: (data: Partial<T>) => void;
+  onSubmit: (data: T) => void;
+}
+
+// Use generics in the registry type
 type FormRegistry = {
   [key: string]: {
-    Component: React.ComponentType<any>;
+    Component: React.ComponentType<FormComponentProps<any>>;
     schema: z.ZodType<any>;
   };
 };
@@ -23,6 +41,10 @@ const formRegistry: FormRegistry = {
   'company-checkup': {
     Component: CompanyCheckupForm,
     schema: companyCheckupSchema,
+  },
+  'trademark-china': {
+    Component: TrademarkChinaForm,
+    schema: trademarkChinaSchema,
   },
   // Add future form components here
 };

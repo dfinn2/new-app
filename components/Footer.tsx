@@ -13,9 +13,9 @@ const Footer = () => {
             <h3 className="text-lg font-semibold">Main Office</h3>
             <div className="flex items-start ml-2">
                 <p className="text-gray-300">
-                    123 Business Avenue<br />
-                    Suite 456<br />
-                    New York, NY 10001
+                    901 Nth Market Street<br />
+                    Suite 201<br />
+                    Wilmington, DE 19801
                 </p>
             </div>
             <div className="flex items-center ml-2">
@@ -29,7 +29,7 @@ const Footer = () => {
             
             {/* Map placeholder - can be replaced with actual MapBox integration */}
             <div className="h-30 w-50 bg-gray-800 rounded-md flex items-center justify-center mt-3 border border-gray-700">
-              <p className="text-sm text-gray-400">Interactive Map</p>
+              <Image src="/maps/office-map-us.png" alt="USA Map" width={400} height={200} />
             </div>
           </div>
           
@@ -38,9 +38,9 @@ const Footer = () => {
             <h3 className="text-lg font-semibold">China Office</h3>
             <div className="flex items-start ml-2">
                 <p className="text-gray-300">
-                    123 Business Avenue<br />
-                    Suite 456<br />
-                    New York, NY 10001
+                    5 West Zhujiang Road, Zhujiang NT<br />
+                    IFC Suite 5405<br />
+                    Guangzhou, CN 510623
                 </p>
             </div>
             <div className="flex items-center ml-2">
@@ -54,7 +54,7 @@ const Footer = () => {
             
             {/* Map placeholder - can be replaced with actual MapBox integration */}
             <div className="h-30 w-50 bg-gray-800 rounded-md flex items-center justify-center mt-3 border border-gray-700">
-              <p className="text-sm text-gray-400">Interactive Map</p>
+              <Image src="/maps/office-map-china.png" alt="China Map" width={400} height={200} />
             </div>
           </div>
           

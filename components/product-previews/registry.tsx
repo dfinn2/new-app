@@ -1,6 +1,7 @@
 // components/product-previews/registry.tsx
 import NNNAgreementPreview from "@/components/product-previews/NnnAgreementPreview";
 import CompanyCheckupPreview from "@/components/product-previews/CompanyCheckupPreview";
+import TrademarkChinaPreview from "@/components/product-previews/TrademarkChinaPreview";
 import DefaultPreview from "@/components/product-previews/DefaultPreview";
 
 // Define the registry type
@@ -12,6 +13,7 @@ type PreviewRegistry = {
 const previewRegistry: PreviewRegistry = {
   'nnn-agreement-cn': NNNAgreementPreview,
   'company-checkup': CompanyCheckupPreview,
+  'trademark-china': TrademarkChinaPreview,
   // Add future preview components here
 };
 

@@ -1,14 +1,15 @@
-// components/product-forms/ChineseTrademarkForm.tsx
+// components/product-forms/TrademarkChinaForm.tsx
 import { useEffect, useState, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { chineseTrademarkSchema, ChineseTrademarkFormData } from "@/schemas/chineseTrademarkSchema";
-import { FormPage1, FormPage2, FormPage3, FormPage4, OrderConfirmation } from "@/components/form-pages/TrademarkFormPages";
-import { useRouter } from "next/navigation";
+import { trademarkChinaSchema, TrademarkChinaFormData } from "@/schemas/trademarkChinaSchema";
+import { FormPage1, FormPage2, FormPage3, OrderConfirmation } from "@/components/form-pages/TrademarkChinaFormPages";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 interface ProductType {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   basePrice: number;
@@ -17,40 +18,66 @@ interface ProductType {
   slug: string;
 }
 
-interface ChineseTrademarkFormProps {
+interface TrademarkChinaFormProps {
   product: ProductType;
-  schema: z.ZodType<ChineseTrademarkFormData>;
-  onChange: (data: Partial<ChineseTrademarkFormData>) => void;
-  onSubmit: (data: ChineseTrademarkFormData) => void;
+  schema: z.ZodType<TrademarkChinaFormData>;
+  onChange: (data: Partial<TrademarkChinaFormData>) => void;
+  onSubmit: (data: TrademarkChinaFormData) => void;
 }
 
-const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkFormProps) => {
+const TrademarkChinaForm = ({ product, onChange, onSubmit }: TrademarkChinaFormProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 5; // Including confirmation page
+  const totalPages = 4; // Including confirmation page
   const firstRender = useRef(true);
   const router = useRouter();
-  
-  // File upload references
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [idDocFile, setIdDocFile] = useState<File | null>(null);
+  const [user, setUser] = useState<any>(null);
   
   // Add states for form processing
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
-  const methods = useForm<ChineseTrademarkFormData>({
-    resolver: zodResolver(chineseTrademarkSchema),
+  // Get user session/email on component mount
+  useEffect(() => {
+    const getUserData = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+      }
+    };
+    
+    getUserData();
+  }, []);
+  
+  const methods = useForm<TrademarkChinaFormData>({
+    resolver: zodResolver(trademarkChinaSchema),
     mode: "onChange",
     defaultValues: {
+      serviceTier: "Standard",
       applicantType: "Individual",
       trademarkType: "Word Mark",
       trademarkClasses: [],
       priorityClaim: false,
-      expressExamination: false,
-    },
+      expeditedExamination: false,
+      preliminaryClearanceSearch: false,
+      chineseNameCreation: false,
+      oppositionMonitoring: false,
+      hasChineseAgent: false,
+      contactPreference: "Email",
+      agreeToTerms: false
+    }
   });
   
-  const { handleSubmit, watch, formState, setError: setFormError, clearErrors, trigger } = methods;
+  const { handleSubmit, watch, formState, trigger, setValue } = methods;
+  
+  // Set email value from user data when available
+  useEffect(() => {
+    if (user?.email) {
+      setValue('applicantEmail', user.email);
+    }
+  }, [user, setValue]);
   
   // Watch for changes to update preview
   const formValues = watch();
@@ -72,69 +99,36 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
     return () => clearTimeout(timeoutId);
   }, [formValues, onChange]);
   
+  // Validation functions for each page
   const validateCurrentPage = async (): Promise<boolean> => {
-    let fieldsToValidate: string[] = [];
+    let fieldsToValidate: Array<keyof TrademarkChinaFormData> = [];
     
     // Determine which fields to validate based on current page
     if (currentPage === 1) {
-      fieldsToValidate = [
-        "applicantType", 
-        "applicantName", 
-        "applicantAddress", 
-        "applicantCountry", 
-        "applicantEmail", 
-        "applicantPhone"
-      ];
-    } else if (currentPage === 2) {
-      fieldsToValidate = [
-        "trademarkName", 
-        "trademarkType", 
-        "trademarkDescription"
-      ];
-      // Logo validation handled separately with file input
-    } else if (currentPage === 3) {
-      fieldsToValidate = ["trademarkClasses"];
-      // Additional validation for priority claim if checked
-      if (formValues.priorityClaim) {
-        fieldsToValidate.push("priorityCountry", "priorityDate", "priorityNumber");
-      }
-    } else if (currentPage === 4) {
-      // ID document validation handled separately with file input
-      fieldsToValidate = [];
-    }
-    
-    // Use trigger to validate specific fields
-    const isValid = await trigger(fieldsToValidate as any[]);
-    
-    // Additional validation for files if needed
-    if (isValid) {
-      if (currentPage === 2) {
-        // Validate logo file is present for logo trademark types
-        const needsLogo = ["Logo/Design Mark", "Combined Word and Design Mark", "3D Mark"].includes(formValues.trademarkType);
-        if (needsLogo && !logoFile) {
-          setFormError("logoFile" as any, { 
-            type: "manual", 
-            message: "Please upload your logo/design" 
-          });
-          return false;
-        }
-      }
+      fieldsToValidate = ['serviceTier', 'applicantType', 'applicantName', 'applicantAddress', 'applicantCity', 'applicantCountry', 'applicantEmail', 'applicantPhone'];
       
-      if (currentPage === 4) {
-        // Validate ID document
-        if (!idDocFile) {
-          setFormError("idDocFile" as any, { 
-            type: "manual", 
-            message: "Please upload an identification document" 
-          });
-          return false;
-        }
+      // Conditionally add fields based on user selections
+      if (formValues.hasChineseAgent) {
+        fieldsToValidate.push('agentName', 'agentAddress', 'agentCity', 'agentProvince');
       }
+    } else if (currentPage === 2) {
+      fieldsToValidate = ['trademarkType', 'trademarkName', 'trademarkDescription', 'trademarkClasses'];
+      
+      // Conditionally add fields for priority claim
+      if (formValues.priorityClaim) {
+        fieldsToValidate.push('priorityCountry', 'priorityApplicationNumber', 'priorityFilingDate');
+      }
+    } else if (currentPage === 3) {
+      fieldsToValidate = ['contactPreference', 'agreeToTerms'];
+      // Additional services don't need validation as they're optional
     }
     
-    return isValid;
+    // Trigger validation for the specified fields
+    const result = await trigger(fieldsToValidate);
+    return result;
   };
   
+  // Navigation handlers
   const handleNext = async () => {
     const isValid = await validateCurrentPage();
     if (isValid) {
@@ -157,32 +151,43 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
       setError(null);
       
       // Validate the form data first
-      const isValid = await methods.trigger();
+      const isValid = await trigger();
       if (!isValid) {
         throw new Error("Please fix the form errors before continuing");
       }
       
       const validatedData = methods.getValues();
       
-      // In a real implementation, you would need to handle file uploads
-      // For this example, we'll just note that files would be uploaded
-      
       // Calculate price based on selections
-      let basePrice = product.basePrice;
+      let totalPrice = 0;
+      switch (validatedData.serviceTier) {
+        case "Standard":
+          totalPrice = 895;
+          break;
+        case "Premium":
+          totalPrice = 1495;
+          break;
+        case "Comprehensive":
+          totalPrice = 2495;
+          break;
+      }
       
-      // Add price for each trademark class (example: $100 per class)
-      const classPrice = 100;
-      const classesCount = validatedData.trademarkClasses.length;
-      const classesTotal = classPrice * classesCount;
+      // Add additional class fees
+      const includedClasses = validatedData.serviceTier === "Standard" ? 1 
+                            : validatedData.serviceTier === "Premium" ? 2 
+                            : 3;
       
-      // Add price for express examination if selected (example: $200)
-      const expressPrice = validatedData.expressExamination ? 200 : 0;
+      const additionalClasses = Math.max(0, validatedData.trademarkClasses.length - includedClasses);
+      totalPrice += additionalClasses * 200;
       
-      // Final price
-      const totalPrice = basePrice + classesTotal + expressPrice;
+      // Add additional services
+      if (validatedData.expeditedExamination) totalPrice += 300;
+      if (validatedData.serviceTier === "Standard" && validatedData.preliminaryClearanceSearch) totalPrice += 250;
+      if (validatedData.serviceTier === "Standard" && validatedData.chineseNameCreation) totalPrice += 350;
+      if ((validatedData.serviceTier === "Standard" || validatedData.serviceTier === "Premium") && validatedData.oppositionMonitoring) totalPrice += 400;
       
       // Store form data in localStorage for retrieval after payment
-      localStorage.setItem('chineseTrademarkFormData', JSON.stringify(validatedData));
+      localStorage.setItem('trademarkChinaFormData', JSON.stringify(validatedData));
       
       // Call the create-checkout-session API
       const response = await fetch("/api/create-checkout-session", {
@@ -191,14 +196,15 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          productId: product._id,
-          productName: `${product.name} (${classesCount} classes${validatedData.expressExamination ? ', Express' : ''})`,
+          productId: product.id,
+          productName: `${product.name} - ${validatedData.serviceTier} Tier`,
           price: totalPrice * 100, // Convert to cents
-          description: `Chinese Trademark Application for "${validatedData.trademarkName}" - ${classesCount} classes${validatedData.expressExamination ? ', Express Examination' : ''}`,
+          description: `${validatedData.serviceTier} tier trademark registration for "${validatedData.trademarkName}" in ${validatedData.trademarkClasses.length} classes`,
           stripePriceId: product.stripePriceId,
           stripeProductId: product.stripeProductId,
           slug: product.slug,
           email: validatedData.applicantEmail,
+          formData: validatedData,
         }),
       });
       
@@ -226,16 +232,13 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
   };
   
   // Form submission handler
-  const handleFormSubmit = async (data: ChineseTrademarkFormData) => {
+  const handleFormSubmit = async (data: TrademarkChinaFormData) => {
     try {
       // Reset error state
       setError(null);
       
-      // Validate the entire form data
-      const validatedData = chineseTrademarkSchema.parse(data);
-      
       // Call the original onSubmit (for compatibility)
-      onSubmit(validatedData);
+      onSubmit(data);
       
       // Process payment directly
       await processPayment();
@@ -247,7 +250,7 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const path = err.path.join('.');
-            setFormError(path as any, { 
+            methods.setError(path as any, { 
               type: 'manual', 
               message: err.message 
             });
@@ -259,20 +262,6 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
     }
   };
   
-  // Get base price for display with classes
-  const calculatePrice = () => {
-    if (!formValues.trademarkClasses) return product.basePrice;
-    
-    // Base price + $100 per class
-    const classPrice = 100;
-    const classesTotal = classPrice * formValues.trademarkClasses.length;
-    
-    // Add express examination fee if selected
-    const expressPrice = formValues.expressExamination ? 200 : 0;
-    
-    return product.basePrice + classesTotal + expressPrice;
-  };
-  
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="h-full flex flex-col">
@@ -280,18 +269,7 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
           {currentPage === 1 && <FormPage1 />}
           {currentPage === 2 && <FormPage2 />}
           {currentPage === 3 && <FormPage3 />}
-          {currentPage === 4 && <FormPage4 />}
-          {currentPage === 5 && <OrderConfirmation data={formValues} />}
-          
-          {/* Price estimate */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-            <h3 className="font-semibold text-lg">Estimated Price: ${calculatePrice().toFixed(2)}</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Base fee: ${product.basePrice.toFixed(2)} + 
-              Class fees: ${(100 * (formValues.trademarkClasses?.length || 0)).toFixed(2)}
-              {formValues.expressExamination && (" + Express fee: $200.00")}
-            </p>
-          </div>
+          {currentPage === 4 && <OrderConfirmation data={formValues} />}
         </div>
         
         {/* Error message */}
@@ -353,4 +331,4 @@ const ChineseTrademarkForm = ({ product, onChange, onSubmit }: ChineseTrademarkF
   );
 };
 
-export default ChineseTrademarkForm;
+export default TrademarkChinaForm;  

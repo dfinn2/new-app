@@ -1,8 +1,8 @@
 // components/product-previews/CompanyCheckupPreview.tsx
 import { useState } from "react";
 import { CompanyCheckupFormData } from "@/schemas/companyCheckupSchema";
-import { Building, FileText, AlertCircle, CheckCircle, User, Map, Phone, Calendar, Users, Package, Factory } from "lucide-react";
-
+import { Building, FileText, AlertCircle, CheckCircle, Calendar, Users, Package, Factory } from "lucide-react";
+import { Button } from "@/components/ui/button";
 interface ProductType {
   id: string;
   name: string;
@@ -493,14 +493,13 @@ const CompanyCheckupPreview = ({ product, formData, isGenerating = false }: Comp
       {isLightboxOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto p-6 relative">
-            <button
+            <Button
               onClick={closeLightbox}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+              className="absolute top-4 right-4"
+              variant="default"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+              close
+            </Button>
             
             <div className="prose max-w-none relative">
               {reportPreview}

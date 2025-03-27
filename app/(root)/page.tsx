@@ -109,7 +109,7 @@ export default async function Home({
               {/* Testimonial logos in a responsive, evenly-spaced grid */}
               <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-2 place-items-center">
                 <Image
-                  src="/trezorlogo.svg"
+                  src="/clientlogos/trezorlogo.svg"
                   width={60}
                   height={60}
                   alt="Trezor Client Testimonial"
@@ -117,7 +117,7 @@ export default async function Home({
                 />
 
                 <Image
-                  src="/qurelogo.svg"
+                  src="/clientlogos/qurelogo.svg"
                   width={60}
                   height={60}
                   alt="Qure Client Testimonial"
@@ -125,7 +125,7 @@ export default async function Home({
                 />
 
                 <Image
-                  src="/vanguardlogo.svg"
+                  src="/clientlogos/vanguardlogo.svg"
                   width={60}
                   height={60}
                   alt="Vanguard Client Testimonial"
@@ -133,7 +133,7 @@ export default async function Home({
                 />
 
                 <Image
-                  src="/pikllogo.svg"
+                  src="/clientlogos/pikllogo.svg"
                   width={60}
                   height={60}
                   alt="Pikl Client Testimonial"

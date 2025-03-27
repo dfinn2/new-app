@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Add useSearchParams
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react';
 
@@ -18,6 +18,8 @@ const AuthForm = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '';
 
   const toggleMode = () => {
     setIsSignUp(!isSignUp);
@@ -50,8 +52,12 @@ const AuthForm = () => {
         throw error;
       }
       
-      // Refresh the page to update auth state
-      router.refresh();
+      // Redirect to onboarding with returnTo parameter
+      if (returnTo) {
+        router.push(`/onboarding?returnTo=${encodeURIComponent(returnTo)}`);
+      } else {
+        router.push('/onboarding');
+      }
     } catch (error: Error | unknown) {
       console.error('Sign up error:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to sign up');
@@ -64,7 +70,7 @@ const AuthForm = () => {
     e.preventDefault();
     
     if (!email || !password) {
-      setErrorMessage('Please provide both email and password');
+      setErrorMessage('Please enter your email and password');
       return;
     }
     
@@ -81,8 +87,12 @@ const AuthForm = () => {
         throw error;
       }
       
-      // Refresh the page to update auth state
-      router.refresh();
+      // Handle redirect after successful login
+      if (returnTo) {
+        router.push(returnTo);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: Error | unknown) {
       console.error('Sign in error:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to sign in');
@@ -96,10 +106,21 @@ const AuthForm = () => {
       setIsLoading(true);
       setErrorMessage('');
       
+      // Store returnTo in localStorage before OAuth redirect
+      if (returnTo) {
+        localStorage.setItem('returnToUrl', returnTo);
+      }
+      
+      // Include returnTo in the options.redirectTo URL
+      const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
+      if (returnTo) {
+        redirectUrl.searchParams.append('returnTo', returnTo);
+      }
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: redirectUrl.toString()
         }
       });
       
@@ -118,12 +139,12 @@ const AuthForm = () => {
   return (
     <div>
       {errorMessage && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+        <div className="mx-20 mb-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
           {errorMessage}
         </div>
       )}
       
-      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4 mx-20">
         {isSignUp && (
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -142,7 +163,7 @@ const AuthForm = () => {
         
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Mail className="h-5 w-5 text-gray-400" />
+            <Mail className="h-5 w-5 text-gray-500" />
           </div>
           <input
             type="email"
@@ -156,7 +177,7 @@ const AuthForm = () => {
         
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-5 w-5 text-gray-400" />
+            <Lock className="h-5 w-5 text-gray-500" />
           </div>
           <input
             type={showPassword ? "text" : "password"}
@@ -169,7 +190,7 @@ const AuthForm = () => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center "
           >
             {showPassword ? (
               <EyeOff className="h-5 w-5 text-gray-400" />
@@ -178,12 +199,13 @@ const AuthForm = () => {
             )}
           </button>
         </div>
-        
+        <div className="pt-4">
         <Button
           type="submit"
-          className="w-full"
+          className="w-full py-6"
           disabled={isLoading}
         >
+          
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -193,21 +215,22 @@ const AuthForm = () => {
             isSignUp ? 'Create Account' : 'Sign In'
           )}
         </Button>
+        </div>
       </form>
       
-      <div className="relative mt-6">
+      <div className="relative mt-6 mx-40">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300"></div>
+          <div className="w-full border-t border-gray-400"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          <span className="px-2 bg-white text-gray-600">Or continue with</span>
         </div>
       </div>
       
-      <div className="mt-6">
+      <div className="mt-6 mx-20">
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full py-5"
           onClick={handleGoogleSignIn}
           disabled={isLoading}
         >

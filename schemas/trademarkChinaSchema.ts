@@ -1,4 +1,4 @@
-// schemas/chineseTrademarkSchema.ts
+// schemas/trademarkChinaSchema.ts
 import { z } from "zod";
 
 // Define trademark types
@@ -10,7 +10,11 @@ const trademarkTypes = [
   "3D Mark"
 ] as const;
 
+// Define service tiers
+const serviceTiers = ["Standard", "Premium", "Comprehensive"] as const;
+
 // Define classification of goods/services (Nice Classification)
+// These are the international trademark classes
 const trademarkClasses = [
   "Class 1: Chemicals",
   "Class 2: Paints",
@@ -59,50 +63,117 @@ const trademarkClasses = [
   "Class 45: Personal and legal services",
 ] as const;
 
-// Define file validation helper function
-const validateFileSize = (file: File | undefined): boolean => {
-  if (!file) return false;
-  return file.size <= 5 * 1024 * 1024; // 5MB max
-};
+// Define China's provinces and administrative regions
+const chinaRegions = [
+  "Beijing",
+  "Shanghai",
+  "Guangdong",
+  "Jiangsu",
+  "Zhejiang",
+  "Shandong",
+  "Fujian",
+  "Sichuan",
+  "Hubei",
+  "Henan",
+  "Liaoning",
+  "Shaanxi",
+  "Anhui",
+  "Tianjin",
+  "Chongqing",
+  "Jilin",
+  "Yunnan",
+  "Hebei",
+  "Hunan",
+  "Guangxi",
+  "Shanxi",
+  "Guizhou",
+  "Jiangxi",
+  "Heilongjiang",
+  "Hainan",
+  "Gansu",
+  "Inner Mongolia",
+  "Xinjiang",
+  "Tibet",
+  "Ningxia",
+  "Qinghai",
+  "Hong Kong SAR",
+  "Macau SAR",
+  "Taiwan Region"
+] as const;
 
-export const chineseTrademarkSchema = z.object({
+// Define countries for priority claim
+const priorityCountries = [
+  "United States",
+  "European Union",
+  "United Kingdom",
+  "Japan",
+  "South Korea",
+  "Australia",
+  "Canada",
+  "Singapore",
+  "Switzerland",
+  "New Zealand",
+  "Other"
+] as const;
+
+// Define the main schema
+export const trademarkChinaSchema = z.object({
+  // Service Tier
+  serviceTier: z.enum(serviceTiers),
+  
   // Applicant Information
   applicantType: z.enum(["Individual", "Corporation", "Partnership", "LLC"]),
   applicantName: z.string().min(1, "Applicant name is required"),
   applicantNameChinese: z.string().optional(),
   applicantAddress: z.string().min(1, "Applicant address is required"),
+  applicantCity: z.string().min(1, "City is required"),
   applicantCountry: z.string().min(1, "Country is required"),
   applicantEmail: z.string().email("Valid email is required"),
   applicantPhone: z.string().min(1, "Phone number is required"),
+  
+  // Chinese Agent Information (Optional)
+  hasChineseAgent: z.boolean().default(false),
+  agentName: z.string().optional(),
+  agentAddress: z.string().optional(),
+  agentCity: z.string().optional(),
+  agentProvince: z.enum(chinaRegions).optional(),
   
   // Trademark Information
   trademarkName: z.string().min(1, "Trademark name is required"),
   trademarkNameChinese: z.string().optional(),
   trademarkType: z.enum(trademarkTypes),
-  trademarkDescription: z.string().min(10, "Please provide a description of your trademark"),
-  
-  // Logo Upload (for design marks)
-  // This will be handled separately - we can't directly validate File objects with Zod in the schema
-  // Instead, we'll use a custom validation function in the form component
+  trademarkDescription: z.string().min(10, "Please provide a detailed description of at least 10 characters"),
   
   // Classification
   trademarkClasses: z.array(z.enum(trademarkClasses))
     .min(1, "Select at least one classification"),
   
-  // Additional Services
+  // Priority Claim (if applicable)
   priorityClaim: z.boolean().default(false),
-  priorityCountry: z.string().optional(),
-  priorityDate: z.string().optional(),
-  priorityNumber: z.string().optional(),
+  priorityCountry: z.enum(priorityCountries).optional(),
+  priorityApplicationNumber: z.string().optional(),
+  priorityFilingDate: z.string().optional(),
   
-  expressExamination: z.boolean().default(false),
+  // Additional Services
+  expeditedExamination: z.boolean().default(false),
+  preliminaryClearanceSearch: z.boolean().default(false),
+  chineseNameCreation: z.boolean().default(false),
+  oppositionMonitoring: z.boolean().default(false),
   
-  // ID Document Upload
-  // This will be handled separately similar to logo upload
+  // Document Upload
+  // Handled separately as file uploads
   
-  // Additional Information
-  additionalInfo: z.string().optional(),
+  // Additional Information or Special Instructions
+  additionalInstructions: z.string().optional(),
+  
+  // Contact preference
+  contactPreference: z.enum(["Email", "Phone", "Both"]).default("Email"),
+  
+  // Agreement to Terms and Conditions
+  agreeToTerms: z.boolean().refine(val => val === true, {
+    message: "You must agree to the terms and conditions",
+  }),
 });
 
-// Type definition
-export type ChineseTrademarkFormData = z.infer<typeof chineseTrademarkSchema>;
+// Type definition for form data
+export type TrademarkChinaFormData = z.infer<typeof trademarkChinaSchema>;

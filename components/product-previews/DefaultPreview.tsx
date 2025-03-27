@@ -145,7 +145,7 @@ export const DefaultPreview: React.FC<DefaultPreviewProps> = ({
                     <h3 className="font-bold text-gray-800 mb-2">2. NON-COMPETITION</h3>
                     <div className="pl-4">
                       <p className="text-gray-700">
-                        The Receiving Party agrees not to compete directly with the Disclosing Party's products based on the Confidential Information.
+                        The Receiving Party agrees not to compete directly with the Disclosing Party&apos;s products based on the Confidential Information.
                       </p>
                     </div>
                   </section>

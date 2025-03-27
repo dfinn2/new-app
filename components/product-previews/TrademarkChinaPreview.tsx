@@ -1,6 +1,6 @@
 // components/product-previews/ChineseTrademarkPreview.tsx
 import { useState } from "react";
-import { ChineseTrademarkFormData } from "@/schemas/chineseTrademarkSchema";
+import { ChineseTrademarkFormData } from "@/schemas/trademarkChinaSchema";
 import { FileText, AlertCircle, CheckCircle, Users, Globe, Clock } from "lucide-react";
 import { Product } from "@/lib/db/types";
 

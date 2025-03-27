@@ -47,8 +47,7 @@ const ProductInfoPage: React.FC<ProductInfoPageProps> = ({
       {!isAuthenticated ? (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center gap-3 mb-4">
-            <Shield className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold">Sign in to Continue</h2>
+            <h2 className="text-2xl font-semibold">Sign in to Continue</h2>
           </div>
           <p className="text-gray-600 mb-6">
             To create and customize your {product.name}, please sign in or create an account.
@@ -61,12 +60,12 @@ const ProductInfoPage: React.FC<ProductInfoPageProps> = ({
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center gap-3 mb-4">
             <Check className="h-6 w-6 text-green-600" />
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-2xl font-semibold">
               {user?.user_metadata?.name ? `Welcome, ${user.user_metadata.name}` : "You're signed in"}
             </h2>
           </div>
           <p className="text-gray-600 mb-6">
-            You're ready to proceed with creating your {product.name}. You'll be able to access this document
+            You&apos;re ready to proceed with creating your {product.name}. You&apos;ll be able to access this document
             in your dashboard after purchase.
           </p>
           <Button onClick={onContinue} className="w-full md:w-auto">
