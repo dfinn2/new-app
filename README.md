@@ -41,8 +41,40 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 
 
-## External Tools
-PDFSHift - Pdf generation, max 50 per month
-Mailgun - email sending 
-.\stripe login
-npx supabase login
+## Required API Keys
+AUTH_SECRET= # Added by `npx auth`
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+NEXTAUTH_URL=http://localhost:3000
+
+# Sanity.io API keys
+NEXT_PUBLIC_SANITY_PROJECT_ID=
+NEXT_PUBLIC_SANITY_DATASET=
+
+# Stripe API keys
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+STRIPE_WEBHOOK_SECRET=
+
+# Supabase API keys
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_ACCESS_TOKEN=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# PDFShift API Key
+PDFSHIFT_API_KEY=
+
+# Mailgun Configuration
+MAILGUN_API_KEY=
+
+# Sandbox Mailgun Configuration
+MAILGUN_DOMAIN=
+EMAIL_FROM_NAME=
+EMAIL_FROM_ADDRESS=
+INTERNAL_EMAIL=
+
+# Google API keys
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

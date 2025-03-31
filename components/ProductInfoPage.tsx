@@ -2,8 +2,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Shield, Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle } from 'lucide-react';
 import AuthForm from './AuthForm';
+
 
 interface ProductInfoPageProps {
   product: {
@@ -37,7 +38,7 @@ const ProductInfoPage: React.FC<ProductInfoPageProps> = ({
           </span>
           <span className="text-gray-500">|</span>
           <span className="text-gray-600 text-sm">
-            Starting at ${product.basePrice?.toFixed(2)}
+            Starting at ${product.basePrice?.toFixed(2)}{product.stripePriceId ? ` / ${product.stripePriceId}` : ''}
           </span>
         </div>
         <p className="text-gray-700">{product.description}</p>
@@ -47,10 +48,10 @@ const ProductInfoPage: React.FC<ProductInfoPageProps> = ({
       {!isAuthenticated ? (
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-2xl font-semibold">Sign in to Continue</h2>
+            <h2 className="text-2xl font-semibold">Create Account to Continue</h2>
           </div>
           <p className="text-gray-600 mb-6">
-            To create and customize your {product.name}, please sign in or create an account.
+            To continue with your <strong>{product.name}</strong>, please sign in or create an account.
             This allows us to securely save your document and provide you with access to it in the future.
           </p>
           

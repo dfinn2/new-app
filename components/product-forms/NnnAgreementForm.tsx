@@ -1,4 +1,4 @@
-// components/product-forms/NnnAgreementForm.tsx - Updated version
+// components/product-forms/NnnAgreementForm.tsx
 import { useEffect, useState, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +7,7 @@ import { FormPage1, FormPage2, FormPage3, OrderConfirmation } from "@/components
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { AlertCircle } from "lucide-react";
 
 interface ProductType {
   id: string;
@@ -51,17 +52,27 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
   }, []);
   
   const methods = useForm<NNNAgreementFormData>({
+    resolver: zodResolver(nnnAgreementSchema),
     mode: "onChange",
     defaultValues: {
       disclosingPartyType: "Individual",
       productTrademark: "notInterested",
-      arbitration: "ICC International Court of Arbitration",
-      penaltyDamages: "liquidatedDamages",
-      email: "", // Email field with empty default - will be populated from user
-    },
+      arbitration: "HKIAC", // Default to Hong Kong arbitration
+      penaltyDamages: "slidingScale", // Default to sliding scale
+      agreementDuration: 5,
+      durationType: "years",
+      email: "", // Will be populated from user data if available
+    }
   });
   
-  const { handleSubmit, watch, formState, setError: setFormError, clearErrors, register, setValue } = methods;
+  const { 
+    handleSubmit, 
+    watch, 
+    formState, 
+    trigger, 
+    setValue,
+    getValues 
+  } = methods;
   
   // Set email value from user data when available
   useEffect(() => {
@@ -72,6 +83,12 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
   
   // Watch for changes to update preview
   const formValues = watch();
+  
+  // Watch specifically for validation fields to control navigation
+  const receivingPartyNameChinese = watch("receivingPartyNameChinese");
+  const receivingPartyUSCC = watch("receivingPartyUSCC");
+  const chineseNameVerified = watch("chineseNameVerified");
+  const usccVerified = watch("usccVerified");
   
   // Update preview whenever form values change - with fix for infinite loop
   useEffect(() => {
@@ -90,75 +107,87 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
     return () => clearTimeout(timeoutId);
   }, [formValues, onChange]);
   
-  const validateFields = async (fieldsToValidate: string[]) => {
-    // Create a partial schema with only the fields we want to validate
-    const partialSchema: Record<string, z.ZodTypeAny> = {};
-    fieldsToValidate.forEach(field => {
-      // Get the field's schema from the main schema
-      const schema = nnnAgreementSchema.shape as Record<string, z.ZodTypeAny>;
-      const fieldSchema = schema[field];
-      if (fieldSchema) {
-        partialSchema[field] = fieldSchema;
-      }
-    });
-    
-    // Create a new partial schema
-    const validationSchema = z.object(partialSchema);
-    
-    try {
-      // Only validate the specified fields
-      const dataToValidate = {} as Partial<NNNAgreementFormData>;
-      fieldsToValidate.forEach(field => {
-        const key = field as keyof NNNAgreementFormData;
-        if (key in formValues) {
-          // Use type assertion to maintain the correct type
-          (dataToValidate as any)[key] = formValues[key];
-        }
-      });
-      
-      validationSchema.parse(dataToValidate);
-      clearErrors();
-      return true;
-    
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        error.errors.forEach((err) => {
-          if (err.path.length > 0) {
-            const path = err.path.join('.');
-            setFormError(path as keyof NNNAgreementFormData, { 
-              type: 'manual', 
-              message: err.message 
-            });
-          }
-        });
-      }
-      return false;
-    }
-  };
-  
-  const handleNext = async () => {
-    let fieldsToValidate: string[] = [];
+  // Validation functions for each page
+  const validateCurrentPage = async (): Promise<boolean> => {
+    let fieldsToValidate: Array<keyof NNNAgreementFormData> = [];
     
     // Determine which fields to validate based on current page
     if (currentPage === 1) {
-      fieldsToValidate = ["disclosingPartyType", "disclosingPartyName"];
+      fieldsToValidate = [
+        'disclosingPartyType', 
+        'disclosingPartyName',
+        'disclosingPartyAddress',
+        'disclosingPartyCountry',
+        'disclosingPartyJurisdiction',
+        'receivingPartyName',
+        'receivingPartyAddress'
+      ];
+      
+      // Add business number if corporation is selected
       if (formValues.disclosingPartyType === "Corporation") {
-        fieldsToValidate.push("disclosingPartyBusinessNumber");
+        fieldsToValidate.push('disclosingPartyBusinessNumber');
       }
-    } else if (currentPage === 2) {
-      fieldsToValidate = ["receivingPartyName", "receivingPartyAddress", "receivingPartyUSCC"];
-    } else if (currentPage === 3) {
-      fieldsToValidate = ["productName", "productDescription", "productTrademark", "arbitration", "penaltyDamages"];
+      
+      // Add validation for Chinese name if not provided
+      if (!receivingPartyNameChinese) {
+        if (!chineseNameVerified) {
+          // Manually add error if neither Chinese name nor verification option is provided
+          setValue('chineseNameVerified', undefined, { shouldValidate: true });
+          return false;
+        }
+      }
+      
+      // Add validation for USCC if not valid
+      const usccRegex = /^[0-9A-Z]{18}$/;
+      if (!usccRegex.test(receivingPartyUSCC || '')) {
+        if (!usccVerified) {
+          // Manually add error if neither valid USCC nor verification option is provided
+          setValue('usccVerified', undefined, { shouldValidate: true });
+          return false;
+        } else {
+          // If they've selected verification, add to validation list
+          fieldsToValidate.push('usccVerified');
+        }
+      } else {
+        // Otherwise validate the USCC itself
+        fieldsToValidate.push('receivingPartyUSCC');
+      }
+    } 
+    else if (currentPage === 2) {
+      fieldsToValidate = ['productName', 'productDescription', 'productTrademark'];
+    } 
+    else if (currentPage === 3) {
+      fieldsToValidate = ['agreementDuration', 'durationType', 'arbitration', 'penaltyDamages'];
+      
+      // Add additional fields based on penalty damages selection
+      if (formValues.penaltyDamages === "fixedAmount" && !formValues.penaltyAmount) {
+        setValue('penaltyAmount', '', { shouldValidate: true });
+        return false;
+      } else if (formValues.penaltyDamages === "contractMultiple" && !formValues.penaltyMultiple) {
+        setValue('penaltyMultiple', '', { shouldValidate: true });
+        return false;
+      }
     }
     
-    const isValid = await validateFields(fieldsToValidate);
+    // Trigger validation for the specified fields
+    const result = await trigger(fieldsToValidate);
+    return result;
+  };
+  
+  // Navigation handlers
+  const handleNext = async () => {
+    const isValid = await validateCurrentPage();
     if (isValid) {
       setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+      // Scroll to top
+      window.scrollTo(0, 0);
     }
   };
   
   const handlePrevious = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
+    // Scroll to top
+    window.scrollTo(0, 0);
   };
   
   // Direct payment handler - creates Stripe session and redirects
@@ -168,16 +197,19 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
       setError(null);
       
       // Validate the form data first
-      const isValid = await methods.trigger();
+      const isValid = await trigger();
       if (!isValid) {
         throw new Error("Please fix the form errors before continuing");
       }
       
-      const validatedData = methods.getValues();
+      const validatedData = getValues();
       
-      // Use user's email if not provided or empty in the form
-      if (!validatedData.email && user?.email) {
-        validatedData.email = user.email;
+      // Calculate total price
+      let totalPrice = product.basePrice || 299; // Base price for NNN Agreement
+      
+      // Add price for company checkup if selected
+      if (validatedData.orderCheckup) {
+        totalPrice += 99;
       }
       
       // Store form data in localStorage for retrieval after payment
@@ -191,9 +223,9 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
         },
         body: JSON.stringify({
           productId: product.id,
-          productName: product.name,
-          price: product.basePrice * 100, // Convert to cents
-          description: product.description || '',
+          productName: `${product.name}${validatedData.orderCheckup ? ' + Company Checkup' : ''}`,
+          price: totalPrice * 100, // Convert to cents
+          description: `NNN Agreement for ${validatedData.productName || 'your product'} with ${validatedData.receivingPartyName || 'manufacturer'}`,
           stripePriceId: product.stripePriceId,
           stripeProductId: product.stripeProductId,
           slug: product.slug,
@@ -231,11 +263,8 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
       // Reset error state
       setError(null);
       
-      // Validate the entire form data
-      const validatedData = nnnAgreementSchema.parse(data);
-      
       // Call the original onSubmit (for compatibility)
-      onSubmit(validatedData);
+      onSubmit(data);
       
       // Process payment directly
       await processPayment();
@@ -247,7 +276,7 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
         error.errors.forEach((err) => {
           if (err.path.length > 0) {
             const path = err.path.join('.');
-            setFormError(path as keyof NNNAgreementFormData, { 
+            methods.setError(path as any, { 
               type: 'manual', 
               message: err.message 
             });
@@ -273,13 +302,13 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
             </label>
             <input
               type="email"
-              {...register("email")}
+              {...methods.register("email")}
               className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
               placeholder="email@example.com"
             />
-            {formState.errors.email && (
+            {methods.formState.errors.email && (
               <p className="text-red-500 text-xs mt-1">
-                {formState.errors.email.message as string}
+                {methods.formState.errors.email.message as string}
               </p>
             )}
           </div>
@@ -310,7 +339,10 @@ const NNNAgreementForm = ({ product, onChange, onSubmit }: NNNAgreementFormProps
         {/* Error message */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
-            {error}
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
           </div>
         )}
         

@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   Check,
-  Globe,
-  Shield,
-  ScrollText,
+ 
   Briefcase,
   ArrowRight,
 } from "lucide-react";
 import Image from "next/image";
+import DocumentGenerationAnimation from "@/components/DocumentGenerationAnimation";
 
 
 
@@ -106,8 +105,34 @@ export default async function Home({
               {/* Top gradient line */}
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent mb-4"></div>
 
-              {/* Testimonial logos in a responsive, evenly-spaced grid */}
-              <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-2 place-items-center">
+              <div className="grid grid-cols-3 text-center mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-blue-600">7+</h3>
+                    <p className="text-xs text-blue-600 uppercase tracking-wider">
+                      Years experience
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">4.3</h3>
+                    <p className="text-xs text-gray-600 uppercase tracking-wider">
+                      Average review
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">24/7</h3>
+                    <p className="text-xs text-gray-600 uppercase tracking-wider">
+                      Support
+                    </p>
+                  </div>
+                </div>
+
+              {/* Bottom gradient line */}
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent mt-4"></div>
+              {/* Stats grid */}
+               {/* Testimonial logos in a responsive, evenly-spaced grid */}
+               <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-2 place-items-center">
                 <Image
                   src="/clientlogos/trezorlogo.svg"
                   width={60}
@@ -141,32 +166,7 @@ export default async function Home({
                 />
 
               </div>
-
-              {/* Bottom gradient line */}
-              <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent mt-4"></div>
-              {/* Stats grid */}
-              <div className="grid grid-cols-3 text-center mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-blue-600">7+</h3>
-                    <p className="text-xs text-blue-600 uppercase tracking-wider">
-                      Years experience
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-800">4.3</h3>
-                    <p className="text-xs text-gray-600 uppercase tracking-wider">
-                      Average review
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-800">24/7</h3>
-                    <p className="text-xs text-gray-600 uppercase tracking-wider">
-                      Support
-                    </p>
-                  </div>
-                </div>
+              
             </div>
           </div>
         </div>
@@ -187,7 +187,10 @@ export default async function Home({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <DocumentGenerationAnimation />
+          </div>
+          {/*<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-lg shadow-sm hover:shadow-md transition-shadow">
               <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
                 <Shield className="h-6 w-6 text-blue-600" />
@@ -220,7 +223,7 @@ export default async function Home({
                 and manufacturing requirements.
               </p>
             </div>
-          </div>
+          </div> */}
 
           <div className="text-center mt-12">
             <Button variant="outline" size="lg" asChild>

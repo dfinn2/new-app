@@ -21,13 +21,18 @@ interface Product {
 }
 
 // Client component that handles the UI and state
-export default function ProductClient({ 
+export default function UpdatedProductClient({ 
   product, 
   slug 
 }: { 
   product: Product;
   slug: string;
 }) {
+  useEffect(() => {
+    // Store the current product page path when component mounts
+    localStorage.setItem('authReturnPath', `/product/${slug}`);
+  }, [slug]);
+
   const router = useRouter();
   const [formData, setFormData] = useState<unknown>({});
   const [showForm, setShowForm] = useState(false);

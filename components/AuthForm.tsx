@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react';
 
 const AuthForm = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  // Set default mode to Signup by initializing as true
+  const [isSignUp, setIsSignUp] = useState(true); // changed from false
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +39,7 @@ const AuthForm = () => {
       setIsLoading(true);
       setErrorMessage('');
       
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -78,7 +79,7 @@ const AuthForm = () => {
       setIsLoading(true);
       setErrorMessage('');
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -117,7 +118,7 @@ const AuthForm = () => {
         redirectUrl.searchParams.append('returnTo', returnTo);
       }
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl.toString()
@@ -144,7 +145,7 @@ const AuthForm = () => {
         </div>
       )}
       
-      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4 mx-20">
+      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4 mx-5">
         {isSignUp && (
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -199,10 +200,10 @@ const AuthForm = () => {
             )}
           </button>
         </div>
-        <div className="pt-4">
+        <div className="pt-4 mx-10">
         <Button
           type="submit"
-          className="w-full py-6"
+          className="w-full py-6 "
           disabled={isLoading}
         >
           
@@ -218,7 +219,7 @@ const AuthForm = () => {
         </div>
       </form>
       
-      <div className="relative mt-6 mx-40">
+      <div className="relative mt-6 mx-20">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-gray-400"></div>
         </div>
@@ -227,10 +228,11 @@ const AuthForm = () => {
         </div>
       </div>
       
-      <div className="mt-6 mx-20">
+      
+      <div className="mt-6 mx-15">
         <Button
           variant="outline"
-          className="w-full py-5"
+          className="w-full py-5 flex items-center justify-center "
           onClick={handleGoogleSignIn}
           disabled={isLoading}
         >
@@ -247,7 +249,7 @@ const AuthForm = () => {
       <div className="mt-4 text-center">
         <button
           type="button"
-          className="text-sm text-blue-600 hover:underline"
+          className="text-md text-blue-500 hover:underline"
           onClick={toggleMode}
         >
           {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}

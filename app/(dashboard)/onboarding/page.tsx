@@ -14,6 +14,10 @@ export default function OnboardingPage() {
     const setupProfile = async () => {
       try {
         setIsLoading(true);
+        
+        // Check for saved return path FIRST - before any other logic
+        const savedReturnPath = localStorage.getItem('authReturnPath');
+           
         const supabase = createClient();
         
         // Check if user is authenticated
@@ -36,14 +40,21 @@ export default function OnboardingPage() {
           .maybeSingle();
         
         if (existingProfile) {
-          // Profile already exists, go to dashboard
-          router.push('/dashboard');
+          // Profile exists - this is likely a sign-in
+          console.log('Existing profile found, redirecting to:', savedReturnPath || '/dashboard');
+          if (savedReturnPath && savedReturnPath.startsWith('/product/')) {
+            localStorage.removeItem('authReturnPath'); // Clear after use
+            router.push(savedReturnPath);
+          } else {
+            router.push('/dashboard'); 
+          }
           return;
         }
         
-        // Create profile for new user
+        // This is a new user - create profile
         const displayName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
         
+        console.log('Creating new profile for user:', user.id);
         const { error: insertError } = await supabase
           .from('user_profiles')
           .insert({
@@ -58,8 +69,16 @@ export default function OnboardingPage() {
           return;
         }
         
-        // Success! Redirect to dashboard
-        router.push('/dashboard');
+        console.log('Profile created successfully');
+        
+        // After profile creation, check for saved path again
+        console.log('After profile creation, redirecting to:', savedReturnPath || '/dashboard');
+        if (savedReturnPath && savedReturnPath.startsWith('/product/')) {
+          localStorage.removeItem('authReturnPath'); // Clear after use
+          router.push(savedReturnPath);
+        } else {
+          router.push('/dashboard');
+        }
         
       } catch (err) {
         console.error('Onboarding error:', err);
@@ -72,35 +91,25 @@ export default function OnboardingPage() {
     setupProfile();
   }, [router]);
   
+  // Your loading and error UI...
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center">
-        <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
-        <h1 className="text-xl font-semibold">Setting up your account...</h1>
-        <p className="mt-2 text-gray-600">This will only take a moment</p>
-      </div>
-    );
+    return <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    </div>;
   }
   
   if (error) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center">
-        <div className="mb-4 rounded-full bg-red-100 p-3 text-red-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-          </svg>
-        </div>
-        <h1 className="text-xl font-semibold">Account Setup Failed</h1>
-        <p className="mt-2 text-gray-600">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-        >
-          Try Again
-        </button>
-      </div>
-    );
+    return <div className="p-6 max-w-md mx-auto bg-white rounded-lg shadow-md">
+      <h2 className="text-xl font-bold text-red-600">Error</h2>
+      <p className="mt-2">{error}</p>
+      <button 
+        onClick={() => router.push('/login')}
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        Return to Login
+      </button>
+    </div>;
   }
   
-  return null; // This shouldn't render as we redirect on success
+  return null; // This page should always redirect
 }

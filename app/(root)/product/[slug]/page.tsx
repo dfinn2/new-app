@@ -5,8 +5,9 @@ import UpdatedProductClient from "./product-client";
 
 // Server component to fetch product data
 export default async function ProductPage({ params }: { params: { slug: string } }) {
-  const slug = params.slug;
-  
+  const resolvedParams = await params;
+  const slug = resolvedParams.slug;
+
   // Fetch product from Supabase server-side
   const supabase = await createClient();
   
