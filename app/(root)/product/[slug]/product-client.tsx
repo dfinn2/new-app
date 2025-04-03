@@ -5,7 +5,7 @@ import { getFormComponent } from '@/components/product-forms/registry';
 import { getPreviewComponent } from '@/components/product-previews/registry';
 import ProductInfoPage from '@/components/ProductInfoPage';
 import { createClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
+
 
 // Define the product interface
 interface Product {
@@ -33,7 +33,6 @@ export default function UpdatedProductClient({
     localStorage.setItem('authReturnPath', `/product/${slug}`);
   }, [slug]);
 
-  const router = useRouter();
   const [formData, setFormData] = useState<unknown>({});
   const [showForm, setShowForm] = useState(false);
   const [generatingDocument, setGeneratingDocument] = useState(false);
@@ -208,12 +207,15 @@ export default function UpdatedProductClient({
         
         {/* Right Column - Dynamic Preview Component with real-time updates */}
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4">Document Preview</h2>
+          
           <PreviewComponent 
             product={product}
             formData={formData}
             isGenerating={generatingDocument}
-          />
+            basePrice={product.basePrice}
+            stripePriceId={product.stripePriceId} 
+            stripeProductId={product.stripeProductId}
+            />
         </div>
       </div>
     </section>

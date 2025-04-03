@@ -45,11 +45,12 @@ export function FormPage1() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold mb-4">Party Information</h2>
       
+      <h2 className="text-lg font-medium mb-2">Disclosing Party (You)</h2>
+
       {/* Disclosing Party Information */}
       <div className="border rounded-lg p-6 bg-gray-50 space-y-4">
-        <h3 className="text-lg font-medium mb-2">Disclosing Party (You)</h3>
+        
         
         <div className="form-group">
           <label className="block text-sm font-medium mb-1">Type of Entity</label>
